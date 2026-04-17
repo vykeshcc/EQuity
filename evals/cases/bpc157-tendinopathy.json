@@ -1,0 +1,22 @@
+{
+  "name": "bpc157-tendinopathy-rat",
+  "input": {
+    "source": "manual",
+    "source_id": "bpc157-test-1",
+    "title": "Pentadecapeptide BPC 157 accelerates healing of rat Achilles tendon transection",
+    "abstract": "We evaluated BPC 157 effect on Achilles tendon-to-bone healing in rats. Forty-eight male Sprague-Dawley rats underwent complete Achilles tendon transection and were randomized to BPC 157 (10 µg/kg intraperitoneally daily, n=24) or saline (n=24) for 14 days. Biomechanical testing on day 14 showed maximal load to failure increased 56% in the BPC 157 group vs saline (32.1 ± 4.8 vs 20.6 ± 3.2 N, p<0.001). Histologic analysis revealed denser collagen fiber organization. No adverse events or mortality were observed. We conclude BPC 157 accelerates functional tendon-to-bone healing in this model.",
+    "journal": "Journal of Orthopaedic Research",
+    "year": 2019
+  },
+  "expected": {
+    "study_type": "animal",
+    "species": "rat",
+    "n_subjects": 48,
+    "peptides": ["BPC 157"],
+    "duration_days": 14,
+    "route": "intraperitoneal"
+  },
+  "rubric": {
+    "required_fields": ["study_type", "species", "n_subjects", "peptides", "duration_days"]
+  }
+}

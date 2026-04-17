@@ -1,0 +1,21 @@
+{
+  "name": "ghk-cu-fibroblast-invitro",
+  "input": {
+    "source": "manual",
+    "source_id": "ghk-cu-test-1",
+    "title": "GHK-Cu peptide stimulates type I collagen synthesis in human dermal fibroblasts",
+    "abstract": "Human dermal fibroblasts (HDFs) were treated with GHK-Cu (copper tripeptide-1) at 0.1, 1, and 10 µM for 72 hours. Type I collagen synthesis, measured by hydroxyproline assay, increased dose-dependently (1.6-, 2.3-, and 3.1-fold vs vehicle; p<0.01 for all). qPCR confirmed upregulation of COL1A1 and TIMP1. No cytotoxicity was observed at any tested concentration. GHK-Cu appears to drive fibroblast collagen production in vitro.",
+    "journal": "Exp Dermatol",
+    "year": 2022
+  },
+  "expected": {
+    "study_type": "in-vitro",
+    "species": "in-vitro",
+    "n_subjects": null,
+    "peptides": ["GHK-Cu"],
+    "duration_days": 3
+  },
+  "rubric": {
+    "required_fields": ["study_type", "species", "peptides"]
+  }
+}

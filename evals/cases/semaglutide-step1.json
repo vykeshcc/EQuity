@@ -1,0 +1,22 @@
+{
+  "name": "semaglutide-step1-rct",
+  "input": {
+    "source": "manual",
+    "source_id": "semaglutide-step1",
+    "title": "Once-Weekly Semaglutide in Adults with Overweight or Obesity",
+    "abstract": "In this double-blind trial, we enrolled 1961 adults with a body-mass index of 30 or greater (or ≥27 with at least one weight-related coexisting condition), who did not have diabetes, and randomly assigned them, in a 2:1 ratio, to receive once-weekly subcutaneous semaglutide (at a dose of 2.4 mg) or placebo, plus lifestyle intervention, for 68 weeks. The coprimary end points were the percentage change in body weight and weight reduction of at least 5%. The mean change in body weight from baseline to week 68 was −14.9% in the semaglutide group as compared with −2.4% with placebo (estimated treatment difference, −12.4 percentage points; 95% CI, −13.4 to −11.5; P<0.001). Adverse events, most commonly nausea and diarrhea, were typically transient and mild-to-moderate in severity.",
+    "journal": "NEJM",
+    "year": 2021
+  },
+  "expected": {
+    "study_type": "RCT",
+    "species": "human",
+    "n_subjects": 1961,
+    "peptides": ["semaglutide"],
+    "duration_days": 476,
+    "route": "subcutaneous"
+  },
+  "rubric": {
+    "required_fields": ["study_type", "species", "n_subjects", "peptides"]
+  }
+}
