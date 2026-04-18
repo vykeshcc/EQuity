@@ -9,15 +9,16 @@ import { reextractBatch } from "@/lib/extraction/reextract-job";
 import { generateEvidenceSummary } from "@/lib/extraction/evidence-summary";
 
 /**
- * Cron-triggered ingestion. Vercel Cron / Supabase pg_cron hits:
- *   POST /api/ingest/pubmed        — per-peptide PubMed sweep
- *   POST /api/ingest/clinicaltrials
- *   POST /api/ingest/biorxiv
- *   POST /api/ingest/policy        — FDA + WADA
- *   POST /api/ingest/reextract     — re-extraction pass
- *   POST /api/ingest/summaries     — regenerate evidence summaries
+ * Cron-triggered ingestion. Vercel Cron sends GET; manual callers may use POST.
+ *   GET /api/ingest/pubmed        — per-peptide PubMed sweep
+ *   GET /api/ingest/clinicaltrials
+ *   GET /api/ingest/biorxiv
+ *   GET /api/ingest/policy        — FDA + WADA
+ *   GET /api/ingest/reextract     — re-extraction pass
+ *   GET /api/ingest/summaries     — regenerate evidence summaries
  *
- * Protected by CRON_SECRET header (x-cron-secret).
+ * Protected by CRON_SECRET: Vercel injects it as Authorization: Bearer <secret>;
+ * manual callers may also pass x-cron-secret.
  */
 
 export const dynamic = "force-dynamic";
@@ -27,9 +28,12 @@ interface RouteProps {
   params: Promise<{ source: string }>;
 }
 
-export async function POST(req: Request, { params }: RouteProps) {
-  const { source } = await params;
-  const secret = req.headers.get("x-cron-secret");
+async function handle(req: Request, source: string): Promise<Response> {
+  // Vercel Cron sends: Authorization: Bearer <CRON_SECRET>
+  // Manual callers may use x-cron-secret header.
+  const bearer = req.headers.get("authorization")?.replace(/^Bearer\s+/i, "");
+  const legacy = req.headers.get("x-cron-secret");
+  const secret = bearer ?? legacy;
   if (process.env.CRON_SECRET && secret !== process.env.CRON_SECRET) {
     return NextResponse.json({ error: "unauthorized" }, { status: 401 });
   }
@@ -97,4 +101,14 @@ export async function POST(req: Request, { params }: RouteProps) {
   } catch (err: any) {
     return NextResponse.json({ ok: false, error: err.message }, { status: 500 });
   }
+}
+
+export async function GET(req: Request, { params }: RouteProps) {
+  const { source } = await params;
+  return handle(req, source);
+}
+
+export async function POST(req: Request, { params }: RouteProps) {
+  const { source } = await params;
+  return handle(req, source);
 }
