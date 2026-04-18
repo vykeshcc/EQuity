@@ -1,5 +1,5 @@
 import type { SupabaseClient } from "@supabase/supabase-js";
-import { callClaude, parseJsonResponse } from "@/lib/claude/client";
+import { callGemini, parseJsonResponse } from "@/lib/gemini/client";
 import { EVIDENCE_SUMMARY_PROMPT_VERSION, EVIDENCE_SUMMARY_SYSTEM, buildEvidenceSummaryUser } from "@/lib/prompts/evidence-summary.v1";
 
 /** Regenerate the per-peptide evidence summary from the highest-quality studies. */
@@ -16,9 +16,10 @@ export async function generateEvidenceSummary(
 
   if (!studies?.length) return null;
 
-  const res = await callClaude({
-    system: [{ text: EVIDENCE_SUMMARY_SYSTEM, cache: true }],
-    messages: [{ role: "user", content: buildEvidenceSummaryUser(peptide.name, studies as any) }],
+  const res = await callGemini({
+    jsonMode: true,
+    system: EVIDENCE_SUMMARY_SYSTEM,
+    userMessage: buildEvidenceSummaryUser(peptide.name, studies as any),
     maxTokens: 1500,
     temperature: 0.2,
   });

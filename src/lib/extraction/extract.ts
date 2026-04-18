@@ -1,4 +1,4 @@
-import { callClaude, parseJsonResponse } from "@/lib/claude/client";
+import { callGemini, parseJsonResponse } from "@/lib/gemini/client";
 import { ExtractedStudy, SCHEMA_VERSION } from "@/lib/extraction/schema";
 import { EXTRACT_PROMPT_VERSION, EXTRACT_SYSTEM_STATIC, buildExtractUserMessage } from "@/lib/prompts/extract.v1";
 import { hashString } from "@/lib/utils/cn";
@@ -34,13 +34,12 @@ export async function extractStudy(input: ExtractInput): Promise<ExtractOutput> 
   const inputHash = hashString(userMsg);
   const longInput = (input.full_text?.length ?? 0) > 40_000;
 
-  const attempt = async (useHard: boolean) => {
-    const res = await callClaude({
-      useHardModel: useHard,
-      system: [
-        { text: EXTRACT_SYSTEM_STATIC, cache: true }, // cached: static schema + rules
-      ],
-      messages: [{ role: "user", content: userMsg }],
+  const attempt = async (usePro: boolean) => {
+    const res = await callGemini({
+      usePro,
+      jsonMode: true,
+      system: EXTRACT_SYSTEM_STATIC,
+      userMessage: userMsg,
       maxTokens: 4096,
       temperature: 0,
     });
@@ -51,7 +50,7 @@ export async function extractStudy(input: ExtractInput): Promise<ExtractOutput> 
 
   let { res, parsed } = await attempt(longInput);
   if (!parsed.success) {
-    // Retry once with Opus on validation failure.
+    // Retry once with Pro on validation failure.
     const hard = await attempt(true);
     if (!hard.parsed.success) {
       throw new Error(
@@ -71,7 +70,7 @@ export async function extractStudy(input: ExtractInput): Promise<ExtractOutput> 
     usage: {
       inputTokens: res.usage.inputTokens,
       outputTokens: res.usage.outputTokens,
-      cachedTokens: res.usage.cacheReadTokens,
+      cachedTokens: 0,
     },
     latencyMs: res.latencyMs,
   };

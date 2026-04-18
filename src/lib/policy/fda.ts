@@ -1,5 +1,5 @@
 import type { SupabaseClient } from "@supabase/supabase-js";
-import { callClaude, parseJsonResponse } from "@/lib/claude/client";
+import { callGemini, parseJsonResponse } from "@/lib/gemini/client";
 import { embed, toPgVector } from "@/lib/embeddings/embed";
 import { hashString } from "@/lib/utils/cn";
 
@@ -81,14 +81,10 @@ export async function ingestFdaPolicy(db: SupabaseClient): Promise<{ checked: nu
     if (existing) continue;
 
     try {
-      const res = await callClaude({
-        system: [{ text: CLASSIFY_SYSTEM, cache: true }],
-        messages: [
-          {
-            role: "user",
-            content: `TRACKED PEPTIDES:\n${peptideList}\n\nFDA ITEM:\nTITLE: ${it.title}\nLINK: ${it.link}\nDATE: ${it.pubDate ?? "?"}\nDESC: ${it.description}\n\nClassify. Return JSON only.`,
-          },
-        ],
+      const res = await callGemini({
+        jsonMode: true,
+        system: CLASSIFY_SYSTEM,
+        userMessage: `TRACKED PEPTIDES:\n${peptideList}\n\nFDA ITEM:\nTITLE: ${it.title}\nLINK: ${it.link}\nDATE: ${it.pubDate ?? "?"}\nDESC: ${it.description}\n\nClassify. Return JSON only.`,
         maxTokens: 512,
         temperature: 0,
       });

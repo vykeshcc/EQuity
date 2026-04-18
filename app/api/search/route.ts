@@ -22,22 +22,29 @@ export async function GET(req: Request) {
     return NextResponse.json({ studies: data ?? [], policy: [], peptides: [] });
   }
 
+  const tsTerms = q
+    .replace(/[^\w\s-]/g, " ")
+    .trim()
+    .split(/\s+/)
+    .filter(Boolean)
+    .join(" | ");
+
   const [{ data: studies }, { data: policy }, { data: peptides }] = await Promise.all([
     db
       .from("studies")
       .select("id,title,year,journal,study_type,species,n_subjects,quality_score")
-      .or(`title.ilike.%${q}%,conclusion.ilike.%${q}%`)
+      .textSearch("full_text_tsv", tsTerms, { type: "plain" })
       .order("quality_score", { ascending: false })
       .limit(40),
     db
       .from("policy_items")
       .select("id,jurisdiction,status,summary,peptide:peptides(slug,name)")
-      .or(`title.ilike.%${q}%,summary.ilike.%${q}%`)
+      .textSearch("search_tsv", tsTerms, { type: "plain" })
       .limit(10),
     db
       .from("peptides")
       .select("slug,name,mechanism")
-      .or(`name.ilike.%${q}%,aliases.cs.{${q}}`)
+      .textSearch("search_tsv", tsTerms, { type: "plain" })
       .limit(10),
   ]);
   return NextResponse.json({ studies: studies ?? [], policy: policy ?? [], peptides: peptides ?? [] });

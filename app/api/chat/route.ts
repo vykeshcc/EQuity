@@ -1,5 +1,5 @@
 import { getDb } from "@/lib/db/client";
-import { getAnthropic } from "@/lib/claude/client";
+import { streamGemini } from "@/lib/gemini/client";
 import { embed, toPgVector } from "@/lib/embeddings/embed";
 import { checkRateLimit, clientKey } from "@/lib/utils/rate-limit";
 import { CHAT_SYSTEM, CHAT_PROMPT_VERSION, buildChatContext } from "@/lib/prompts/chat.v1";
@@ -90,28 +90,20 @@ export async function POST(req: Request): Promise<Response> {
       send({ type: "sources", sources, promptVersion: CHAT_PROMPT_VERSION });
 
       try {
-        const anthropic = getAnthropic();
-        const claudeStream = await anthropic.messages.create({
-          stream: true,
-          model: process.env.ANTHROPIC_EXTRACTION_MODEL ?? "claude-sonnet-4-6",
-          max_tokens: 1024,
-          system: [{ type: "text", text: systemPrompt, cache_control: { type: "ephemeral" } } as any],
-          messages: [
-            ...history,
-            { role: "user", content: message },
-          ],
-        });
+        const geminiHistory = history.map((m) => ({
+          role: m.role === "user" ? "user" as const : "model" as const,
+          parts: [{ text: m.content }],
+        }));
 
-        for await (const event of claudeStream) {
-          if (
-            event.type === "content_block_delta" &&
-            event.delta.type === "text_delta"
-          ) {
-            send({ type: "delta", text: event.delta.text });
-          }
-        }
+        await streamGemini({
+          system: systemPrompt,
+          history: geminiHistory,
+          userMessage: message,
+          maxTokens: 1024,
+          onChunk: (text) => send({ type: "delta", text }),
+        });
       } catch (err: any) {
-        send({ type: "error", error: err.message ?? "Claude error" });
+        send({ type: "error", error: err.message ?? "Gemini error" });
       }
 
       send({ type: "done" });

@@ -35,22 +35,28 @@ export default async function SearchPage({ searchParams }: PageProps) {
         studies = [];
       }
     } else {
+      const tsTerms = q
+        .replace(/[^\w\s-]/g, " ")
+        .trim()
+        .split(/\s+/)
+        .filter(Boolean)
+        .join(" | ");
       const [{ data: s, count: sc }, { data: p }, { data: pep }] = await Promise.all([
         db
           .from("studies")
           .select("id,title,year,journal,study_type,species,n_subjects,quality_score", { count: "exact" })
-          .or(`title.ilike.%${q}%,conclusion.ilike.%${q}%`)
+          .textSearch("full_text_tsv", tsTerms, { type: "plain" })
           .order("quality_score", { ascending: false })
           .range(from, from + PAGE_SIZE - 1),
         db
           .from("policy_items")
           .select("id,jurisdiction,status,summary,source_url,effective_date,peptide:peptides(slug,name)")
-          .or(`title.ilike.%${q}%,summary.ilike.%${q}%`)
+          .textSearch("search_tsv", tsTerms, { type: "plain" })
           .limit(10),
         db
           .from("peptides")
           .select("slug,name,mechanism,study_count")
-          .or(`name.ilike.%${q}%,aliases.cs.{${q}}`)
+          .textSearch("search_tsv", tsTerms, { type: "plain" })
           .limit(10),
       ]);
       studies = s ?? [];
