@@ -1,3 +1,4 @@
+import Link from "next/link";
 import { getDb } from "@/lib/db/client";
 
 export const dynamic = "force-dynamic";
@@ -24,11 +25,16 @@ export default async function EvalDashboard() {
 
   return (
     <div className="space-y-8">
-      <header>
-        <h1 className="text-2xl font-semibold">Eval dashboard</h1>
-        <p className="text-sm text-slate-600">
-          Golden-set extraction accuracy across prompt versions and Claude models.
-        </p>
+      <header className="flex items-end justify-between">
+        <div>
+          <h1 className="text-2xl font-semibold">Eval dashboard</h1>
+          <p className="text-sm text-slate-600">
+            Golden-set extraction accuracy across prompt versions and Claude models.
+          </p>
+        </div>
+        <Link href="/admin/feedback" className="text-sm text-brand-700 hover:underline">
+          Feedback review →
+        </Link>
       </header>
 
       <section>

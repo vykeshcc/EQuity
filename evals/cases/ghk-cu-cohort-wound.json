@@ -1,0 +1,22 @@
+{
+  "name": "ghk-cu-wound-cohort-human",
+  "input": {
+    "source": "manual",
+    "source_id": "ghk-cu-cohort-1",
+    "title": "Topical GHK-Cu tripeptide reduces scar formation following surgical skin closure: a prospective cohort study",
+    "abstract": "A prospective cohort of 55 patients undergoing elective abdominal surgery at a single institution was enrolled. All patients received standard wound closure; 30 applied topical GHK-Cu cream (0.5% w/w) twice daily for 90 days post-operatively (exposed cohort), while 25 used petroleum jelly (unexposed cohort) by patient preference. Scar assessment at 90 days using the Vancouver Scar Scale (VSS) showed significantly lower scores in the GHK-Cu group (mean 3.1 ± 1.4 vs 5.7 ± 2.1; p<0.001). Patient-reported itch and discomfort scores were also lower. No systemic absorption or adverse skin reactions were noted. The findings support a larger randomized trial of GHK-Cu for post-surgical scar management.",
+    "journal": "Journal of Wound Care",
+    "year": 2021
+  },
+  "expected": {
+    "study_type": "cohort",
+    "species": "human",
+    "n_subjects": 55,
+    "peptides": ["GHK-Cu"],
+    "duration_days": 90,
+    "route": "topical"
+  },
+  "rubric": {
+    "required_fields": ["study_type", "species", "n_subjects", "peptides", "duration_days"]
+  }
+}

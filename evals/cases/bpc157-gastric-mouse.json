@@ -1,0 +1,22 @@
+{
+  "name": "bpc157-gastric-ulcer-mouse",
+  "input": {
+    "source": "manual",
+    "source_id": "bpc157-mouse-1",
+    "title": "BPC 157 promotes gastric ulcer healing in mice through COX-2 and VEGF upregulation",
+    "abstract": "C57BL/6 mice (n=60) received acetic-acid-induced gastric ulcers and were divided into three groups of 20: BPC 157 (10 µg/kg intraperitoneally, daily), omeprazole (10 mg/kg orally, daily), or saline vehicle for 10 days. Ulcer area on day 10, measured by planimetry, was significantly reduced in BPC 157 mice (2.1 ± 0.4 mm²) vs saline (8.7 ± 1.2 mm²; p<0.001) and comparable to omeprazole (2.4 ± 0.5 mm²). Immunohistochemistry showed elevated COX-2 and VEGF expression in the BPC 157 group. No mortality or abnormal behavior was observed. BPC 157 promotes gastric mucosal healing via pro-angiogenic and anti-inflammatory mechanisms.",
+    "journal": "Life Sciences",
+    "year": 2018
+  },
+  "expected": {
+    "study_type": "animal",
+    "species": "mouse",
+    "n_subjects": 60,
+    "peptides": ["BPC 157"],
+    "duration_days": 10,
+    "route": "intraperitoneal"
+  },
+  "rubric": {
+    "required_fields": ["study_type", "species", "n_subjects", "peptides", "duration_days"]
+  }
+}

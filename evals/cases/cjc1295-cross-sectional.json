@@ -1,0 +1,21 @@
+{
+  "name": "cjc1295-gh-cross-sectional",
+  "input": {
+    "source": "manual",
+    "source_id": "cjc1295-cross-1",
+    "title": "Self-reported CJC-1295 use and IGF-1 levels among recreational bodybuilders: a cross-sectional survey",
+    "abstract": "A cross-sectional survey and blood sampling study was conducted at two fitness expositions. Of 310 male recreational bodybuilders surveyed (mean age 29 ± 6 years), 78 (25%) reported current or recent CJC-1295 use (within 30 days). Current users had significantly higher serum IGF-1 levels (318 ± 74 ng/mL) compared with non-users (214 ± 52 ng/mL; p<0.001, adjusted for age, BMI, and steroid co-use). Self-reported dose ranged from 0.5 to 2 mg subcutaneous twice weekly. This cross-sectional observation is limited by self-report bias and cannot establish causality, but suggests meaningful IGF-1 elevation associated with CJC-1295 use in this population.",
+    "journal": "Drug and Alcohol Dependence",
+    "year": 2022
+  },
+  "expected": {
+    "study_type": "cross-sectional",
+    "species": "human",
+    "n_subjects": 310,
+    "peptides": ["CJC-1295"],
+    "route": "subcutaneous"
+  },
+  "rubric": {
+    "required_fields": ["study_type", "species", "n_subjects", "peptides"]
+  }
+}

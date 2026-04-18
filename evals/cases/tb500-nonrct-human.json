@@ -1,0 +1,22 @@
+{
+  "name": "tb500-wound-nonrct-human",
+  "input": {
+    "source": "manual",
+    "source_id": "tb500-nonrct-1",
+    "title": "Thymosin beta-4 accelerates wound closure in chronic venous ulcers: a non-randomized controlled study",
+    "abstract": "Forty patients with chronic venous ulcers were enrolled: 20 received intralesional thymosin beta-4 (TB-500, 2 mg twice weekly) for 8 weeks alongside standard compression therapy (treatment group), and 20 received compression therapy alone (control group). Groups were allocated by physician preference, not randomization. At week 8, median wound area reduction was 68% in the TB-500 group vs 29% in the control group (p=0.003, Mann–Whitney U). Complete closure was achieved in 7 of 20 TB-500 patients vs 2 of 20 controls. Adverse events were minor (injection-site erythema in 4 patients). This prospective non-randomized controlled study supports the potential of TB-500 to accelerate chronic wound healing.",
+    "journal": "Wound Repair and Regeneration",
+    "year": 2020
+  },
+  "expected": {
+    "study_type": "non-randomized-controlled",
+    "species": "human",
+    "n_subjects": 40,
+    "peptides": ["thymosin beta-4"],
+    "duration_days": 56,
+    "route": "intralesional"
+  },
+  "rubric": {
+    "required_fields": ["study_type", "species", "n_subjects", "peptides", "duration_days"]
+  }
+}

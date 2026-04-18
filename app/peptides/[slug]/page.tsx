@@ -3,15 +3,23 @@ import Link from "next/link";
 import { getDb } from "@/lib/db/client";
 import { RankedStudyList } from "@/components/RankedStudyList";
 import { FeedbackButtons } from "@/components/FeedbackButtons";
+import { Pagination } from "@/components/Pagination";
 
 export const revalidate = 300;
 
+const STUDY_PAGE_SIZE = 25;
+
 interface PageProps {
   params: Promise<{ slug: string }>;
+  searchParams: Promise<{ studyPage?: string }>;
 }
 
-export default async function PeptideDetailPage({ params }: PageProps) {
+export default async function PeptideDetailPage({ params, searchParams }: PageProps) {
   const { slug } = await params;
+  const { studyPage: studyPageParam } = await searchParams;
+  const studyPage = Math.max(1, Number(studyPageParam ?? 1));
+  const studyFrom = (studyPage - 1) * STUDY_PAGE_SIZE;
+  const studyTo = studyFrom + STUDY_PAGE_SIZE - 1;
   const db = getDb();
 
   const { data: peptide } = await db
@@ -21,13 +29,13 @@ export default async function PeptideDetailPage({ params }: PageProps) {
     .maybeSingle();
   if (!peptide) notFound();
 
-  const [{ data: studies }, { data: policy }, { data: summary }] = await Promise.all([
+  const [{ data: studies, count: studyCount }, { data: policy }, { data: summary }] = await Promise.all([
     db
       .from("studies")
-      .select("id,title,year,journal,study_type,species,n_subjects,quality_score,highlights,study_peptides!inner(peptide_id)")
+      .select("id,title,year,journal,study_type,species,n_subjects,quality_score,highlights,study_peptides!inner(peptide_id)", { count: "exact" })
       .eq("study_peptides.peptide_id", peptide.id)
       .order("quality_score", { ascending: false })
-      .limit(50),
+      .range(studyFrom, studyTo),
     db
       .from("policy_items")
       .select("id,jurisdiction,status,title,summary,effective_date,source_url")
@@ -111,9 +119,16 @@ export default async function PeptideDetailPage({ params }: PageProps) {
       <section>
         <div className="mb-3 flex items-end justify-between">
           <h2 className="text-lg font-semibold">Ranked studies</h2>
-          <span className="text-xs text-slate-500">Sorted by composite quality score (0–100)</span>
+          <span className="text-xs text-slate-500">
+            {studyCount ?? 0} total · sorted by composite quality score (0–100)
+          </span>
         </div>
         <RankedStudyList studies={(studies ?? []) as any} />
+        <Pagination
+          page={studyPage}
+          hasMore={studyFrom + STUDY_PAGE_SIZE < (studyCount ?? 0)}
+          buildHref={(p) => `/peptides/${slug}?studyPage=${p}`}
+        />
       </section>
     </div>
   );
