@@ -1,14 +1,13 @@
 "use client";
 
-import { useState } from "react";
+import { Suspense, useState } from "react";
 import { useRouter, useSearchParams } from "next/navigation";
 import { getDb } from "@/lib/db/client";
-import Link from "next/link";
 
 type Mode = "signin" | "signup" | "magic";
 type Status = "idle" | "loading" | "magic-sent" | "error";
 
-export default function LoginPage() {
+function LoginForm() {
   const [mode, setMode] = useState<Mode>("signin");
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
@@ -43,7 +42,7 @@ export default function LoginPage() {
         options: { emailRedirectTo: `${window.location.origin}/auth/callback?next=${encodeURIComponent(next)}` },
       });
       if (error) { setErrorMsg(error.message); setStatus("error"); }
-      else setStatus("magic-sent"); // Supabase sends a confirmation email
+      else setStatus("magic-sent");
       return;
     }
 
@@ -122,5 +121,13 @@ export default function LoginPage() {
         </div>
       </form>
     </div>
+  );
+}
+
+export default function LoginPage() {
+  return (
+    <Suspense>
+      <LoginForm />
+    </Suspense>
   );
 }

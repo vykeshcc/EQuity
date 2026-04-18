@@ -1,11 +1,29 @@
 import { notFound } from "next/navigation";
 import Link from "next/link";
+import { marked } from "marked";
 import { getDb } from "@/lib/db/client";
 import { RankedStudyList } from "@/components/RankedStudyList";
 import { FeedbackButtons } from "@/components/FeedbackButtons";
 import { Pagination } from "@/components/Pagination";
 
 export const revalidate = 300;
+
+export async function generateMetadata({ params }: { params: Promise<{ slug: string }> }) {
+  const { slug } = await params;
+  const db = getDb();
+  const { data: p } = await db.from("peptides").select("name,mechanism,study_count").eq("slug", slug).maybeSingle();
+  if (!p) return {};
+  return {
+    title: `${p.name} — EQuity Peptide Research`,
+    description: p.mechanism
+      ? `${p.mechanism} · ${p.study_count ?? 0} studies ranked by evidence quality.`
+      : `${p.study_count ?? 0} studies on ${p.name} ranked by evidence quality.`,
+    openGraph: {
+      title: `${p.name} — EQuity`,
+      description: p.mechanism ?? `Research evidence on ${p.name}`,
+    },
+  };
+}
 
 const STUDY_PAGE_SIZE = 25;
 
@@ -135,18 +153,10 @@ export default async function PeptideDetailPage({ params, searchParams }: PagePr
 }
 
 function markdownToHtml(md: string): string {
-  // Minimal markdown rendering — avoid a full MD library for now.
-  return md
-    .replace(/&/g, "&amp;")
-    .replace(/</g, "&lt;")
-    .replace(/>/g, "&gt;")
-    .replace(/^### (.*)$/gm, "<h3>$1</h3>")
-    .replace(/^## (.*)$/gm, "<h2>$1</h2>")
-    .replace(/^# (.*)$/gm, "<h1>$1</h1>")
-    .replace(/\*\*(.+?)\*\*/g, "<strong>$1</strong>")
-    .replace(/\*(.+?)\*/g, "<em>$1</em>")
-    .replace(/\[(s-[a-f0-9]{8})\]/g, '<span class="rounded bg-brand-50 px-1 text-xs text-brand-700">$1</span>')
-    .split(/\n{2,}/)
-    .map((p) => (p.startsWith("<h") ? p : `<p>${p.replace(/\n/g, "<br/>")}</p>`))
-    .join("\n");
+  // Highlight study citation tokens like [s-a1b2c3d4] before parsing.
+  const withCitations = md.replace(
+    /\[(s-[a-f0-9]{8})\]/g,
+    '<span class="rounded bg-brand-50 px-1 text-xs text-brand-700">$1</span>',
+  );
+  return marked.parse(withCitations) as string;
 }

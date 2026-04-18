@@ -49,17 +49,13 @@ async function handle(req: Request, source: string): Promise<Response> {
       case "pubmed":
       case "clinicaltrials":
       case "biorxiv": {
-        const { data: peptides } = await db
-          .from("peptides")
-          .select("id,name,aliases,slug")
-          .eq(peptideSlug ? "slug" : "id", peptideSlug ?? "id")
-          .limit(peptideSlug ? 1 : 200);
-        // Fallback: if no filter, pull all peptides.
-        const list = peptideSlug
-          ? peptides ?? []
-          : (await db.from("peptides").select("id,name,aliases,slug")).data ?? [];
+        const query = db.from("peptides").select("id,name,aliases,slug");
+        if (peptideSlug) query.eq("slug", peptideSlug).limit(1);
+        else query.limit(200);
+        const { data: list } = await query;
         const results = [];
-        for (const p of list) {
+        // list is null only on DB error; skip gracefully.
+        for (const p of list ?? []) {
           if (source === "pubmed") {
             results.push(await ingestPubmedForPeptide(db, p as any, { limit, sinceDays }));
           } else if (source === "clinicaltrials") {

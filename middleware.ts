@@ -7,6 +7,9 @@ import type { NextRequest } from "next/server";
  * If the env var is not set, admin routes are open (dev convenience).
  */
 export function middleware(req: NextRequest) {
+  // Never gate the login page itself — would cause an infinite redirect.
+  if (req.nextUrl.pathname === "/admin/login") return NextResponse.next();
+
   const adminToken = process.env.ADMIN_TOKEN;
   if (!adminToken) return NextResponse.next();
 
