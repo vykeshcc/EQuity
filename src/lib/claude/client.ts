@@ -1,21 +1,13 @@
-import Anthropic from "@anthropic-ai/sdk";
+import { GoogleGenAI } from "@google/genai";
 
-/**
- * Claude client wrapper with:
- *  - Singleton Anthropic SDK instance
- *  - Prompt caching on large/static blocks (schema + instructions)
- *  - Retry with exponential backoff on transient errors
- *  - Usage accounting returned alongside the result
- */
+const DEFAULT_EXTRACTION_MODEL = process.env.GEMINI_EXTRACTION_MODEL || "gemini-2.5-pro";
+const DEFAULT_HARD_MODEL = process.env.GEMINI_HARD_MODEL || "gemini-2.5-pro";
 
-const DEFAULT_EXTRACTION_MODEL = process.env.ANTHROPIC_EXTRACTION_MODEL || "claude-sonnet-4-6";
-const DEFAULT_HARD_MODEL = process.env.ANTHROPIC_HARD_MODEL || "claude-opus-4-7";
-
-let client: Anthropic | null = null;
-export function getAnthropic(): Anthropic {
+let client: GoogleGenAI | null = null;
+export function getGemini(): GoogleGenAI {
   if (!client) {
-    if (!process.env.ANTHROPIC_API_KEY) throw new Error("ANTHROPIC_API_KEY not set");
-    client = new Anthropic({ apiKey: process.env.ANTHROPIC_API_KEY });
+    if (!process.env.GEMINI_API_KEY) throw new Error("GEMINI_API_KEY not set");
+    client = new GoogleGenAI({ apiKey: process.env.GEMINI_API_KEY });
   }
   return client;
 }
@@ -25,15 +17,20 @@ export interface CachedBlock {
   cache?: boolean;
 }
 
+export interface MessageParam {
+  role: "user" | "assistant";
+  content: string;
+}
+
 export interface ClaudeCallOptions {
   system?: CachedBlock[] | string;
-  messages: Anthropic.MessageParam[];
+  messages: MessageParam[];
   model?: string;
   maxTokens?: number;
   temperature?: number;
   /** Attempt up to this many times on 429/5xx. */
   maxRetries?: number;
-  /** Force Opus path for hard/long inputs. */
+  /** Force hard model path for complex/long inputs. */
   useHardModel?: boolean;
 }
 
@@ -48,17 +45,13 @@ export interface ClaudeCallResult {
     cacheReadTokens: number;
   };
   latencyMs: number;
-  raw: Anthropic.Message;
+  raw: unknown;
 }
 
-function buildSystem(system: ClaudeCallOptions["system"]): string | Anthropic.TextBlockParam[] | undefined {
+function buildSystemInstruction(system: ClaudeCallOptions["system"]): string | undefined {
   if (!system) return undefined;
   if (typeof system === "string") return system;
-  return system.map((b) => {
-    const block: Anthropic.TextBlockParam = { type: "text", text: b.text };
-    if (b.cache) (block as any).cache_control = { type: "ephemeral" };
-    return block;
-  });
+  return system.map((b) => b.text).join("\n\n");
 }
 
 async function sleep(ms: number) {
@@ -66,39 +59,44 @@ async function sleep(ms: number) {
 }
 
 export async function callClaude(opts: ClaudeCallOptions): Promise<ClaudeCallResult> {
-  const anthropic = getAnthropic();
+  const gemini = getGemini();
   const model = opts.model ?? (opts.useHardModel ? DEFAULT_HARD_MODEL : DEFAULT_EXTRACTION_MODEL);
   const maxRetries = opts.maxRetries ?? 3;
-  const system = buildSystem(opts.system);
+  const systemInstruction = buildSystemInstruction(opts.system);
+
+  const contents = opts.messages.map((m) => ({
+    role: m.role === "assistant" ? "model" : "user",
+    parts: [{ text: m.content }],
+  }));
 
   const startedAt = Date.now();
   let lastErr: unknown;
   for (let attempt = 0; attempt <= maxRetries; attempt++) {
     try {
-      const msg = await anthropic.messages.create({
+      const result = await gemini.models.generateContent({
         model,
-        max_tokens: opts.maxTokens ?? 4096,
-        temperature: opts.temperature ?? 0,
-        system: system as any,
-        messages: opts.messages,
+        contents,
+        config: {
+          ...(systemInstruction ? { systemInstruction } : {}),
+          maxOutputTokens: opts.maxTokens ?? 4096,
+          temperature: opts.temperature ?? 0,
+        },
       });
-      const text = msg.content
-        .filter((b): b is Anthropic.TextBlock => b.type === "text")
-        .map((b) => b.text)
-        .join("\n");
-      const u: any = msg.usage ?? {};
+
+      const text = result.text ?? "";
+      const u = result.usageMetadata ?? {};
       return {
         text,
-        model: msg.model,
-        stopReason: msg.stop_reason,
+        model,
+        stopReason: result.candidates?.[0]?.finishReason?.toString() ?? null,
         usage: {
-          inputTokens: u.input_tokens ?? 0,
-          outputTokens: u.output_tokens ?? 0,
-          cacheCreationTokens: u.cache_creation_input_tokens ?? 0,
-          cacheReadTokens: u.cache_read_input_tokens ?? 0,
+          inputTokens: u.promptTokenCount ?? 0,
+          outputTokens: u.candidatesTokenCount ?? 0,
+          cacheCreationTokens: 0,
+          cacheReadTokens: u.cachedContentTokenCount ?? 0,
         },
         latencyMs: Date.now() - startedAt,
-        raw: msg,
+        raw: result,
       };
     } catch (err: any) {
       lastErr = err;
@@ -112,11 +110,10 @@ export async function callClaude(opts: ClaudeCallOptions): Promise<ClaudeCallRes
   throw lastErr;
 }
 
-/** Parse a Claude response that was asked to return JSON, tolerating code-fenced output. */
+/** Parse a model response that was asked to return JSON, tolerating code-fenced output. */
 export function parseJsonResponse<T = unknown>(text: string): T {
   const fenced = text.match(/```(?:json)?\s*([\s\S]*?)```/);
   const body = (fenced ? fenced[1] : text).trim();
-  // Strip any leading prose before first `{` or `[`.
   const startObj = body.indexOf("{");
   const startArr = body.indexOf("[");
   const start = [startObj, startArr].filter((i) => i >= 0).sort((a, b) => a - b)[0] ?? 0;
