@@ -1,5 +1,6 @@
 import { NextResponse } from "next/server";
-import { getAdminDb, getDb } from "@/lib/db/client";
+import { getAdminDb } from "@/lib/db/client";
+import { getServerDb } from "@/lib/db/server";
 import { ingestPubmedForPeptide } from "@/lib/ingestion/pubmed";
 import { ingestCtGovForPeptide } from "@/lib/ingestion/clinicaltrials";
 import { ingestBiorxivForPeptide } from "@/lib/ingestion/biorxiv";
@@ -39,7 +40,7 @@ async function handle(req: Request, source: string): Promise<Response> {
   }
 
   const db = getAdminDb();
-  const anonDb = getDb(); // anon key — used only for public reads (peptides list)
+  const anonDb = await getServerDb(); // SSR client — new key format works here
   const url = new URL(req.url);
   const peptideSlug = url.searchParams.get("peptide");
   const limit = Number(url.searchParams.get("limit") ?? "25");
