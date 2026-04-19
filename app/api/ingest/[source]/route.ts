@@ -49,12 +49,12 @@ async function handle(req: Request, source: string): Promise<Response> {
       case "pubmed":
       case "clinicaltrials":
       case "biorxiv": {
-        const query = db.from("peptides").select("id,name,aliases,slug");
-        if (peptideSlug) query.eq("slug", peptideSlug).limit(1);
-        else query.limit(200);
-        const { data: list } = await query;
+        let query = db.from("peptides").select("id,name,aliases,slug");
+        if (peptideSlug) query = query.eq("slug", peptideSlug).limit(1) as any;
+        else query = query.limit(200) as any;
+        const { data: list, error: listError } = await query;
+        if (listError) return NextResponse.json({ ok: false, error: "peptides query failed", detail: listError }, { status: 500 });
         const results = [];
-        // list is null only on DB error; skip gracefully.
         for (const p of list ?? []) {
           if (source === "pubmed") {
             results.push(await ingestPubmedForPeptide(db, p as any, { limit, sinceDays }));
