@@ -83,12 +83,20 @@ async function handle(req: Request, source: string): Promise<Response> {
 
       // Process raw_documents that were fetched but never successfully extracted.
       case "reprocess": {
-        const { data: unprocessed } = await db
+        // Find raw_documents not yet referenced by any study.
+        const { data: studiedIds } = await db
+          .from("studies")
+          .select("raw_document_id")
+          .not("raw_document_id", "is", null)
+          .limit(10000);
+        const doneSet = new Set((studiedIds ?? []).map((r: any) => r.raw_document_id));
+
+        const { data: allRaw } = await db
           .from("raw_documents")
           .select("id,source,source_id,title,abstract,full_text,doi,source_url")
-          .is("study_id", null)
           .not("abstract", "is", null)
-          .limit(limit);
+          .limit(limit * 4);
+        const unprocessed = (allRaw ?? []).filter((r: any) => !doneSet.has(r.id)).slice(0, limit);
         const result = { processed: 0, newStudies: 0, errors: [] as string[] };
         for (const raw of unprocessed ?? []) {
           try {
