@@ -93,12 +93,16 @@ async function handle(req: Request, source: string): Promise<Response> {
 
         const { data: allRaw } = await anonDb
           .from("raw_documents")
-          .select("id,source,source_id,title,abstract,full_text,doi,source_url")
+          .select("id,source,source_id,title,abstract,full_text,doi")
           .not("abstract", "is", null)
           .limit(limit * 4);
         const unprocessed = (allRaw ?? []).filter((r: any) => !doneSet.has(r.id)).slice(0, limit);
         const result = { processed: 0, newStudies: 0, errors: [] as string[] };
         for (const raw of unprocessed ?? []) {
+          const sourceUrl =
+            raw.source === "pubmed" ? `https://pubmed.ncbi.nlm.nih.gov/${raw.source_id}/` :
+            raw.source === "clinicaltrials" ? `https://clinicaltrials.gov/study/${raw.source_id}` :
+            raw.doi ? `https://doi.org/${raw.doi}` : null;
           try {
             const extraction = await extractStudy({
               source: raw.source as any,
@@ -114,7 +118,7 @@ async function handle(req: Request, source: string): Promise<Response> {
               source: raw.source,
               source_id: raw.source_id,
               extraction,
-              source_url: raw.source_url,
+              source_url: sourceUrl,
             });
             result.newStudies++;
           } catch (err: any) {
