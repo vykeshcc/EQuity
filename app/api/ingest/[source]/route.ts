@@ -7,6 +7,8 @@ import { ingestBiorxivForPeptide } from "@/lib/ingestion/biorxiv";
 import { ingestFdaPolicy } from "@/lib/policy/fda";
 import { ingestWadaPolicy } from "@/lib/policy/wada";
 import { reextractBatch } from "@/lib/extraction/reextract-job";
+import { extractStudy } from "@/lib/extraction/extract";
+import { persistStudy } from "@/lib/extraction/persist";
 import { generateEvidenceSummary } from "@/lib/extraction/evidence-summary";
 
 /**
@@ -77,6 +79,42 @@ async function handle(req: Request, source: string): Promise<Response> {
       case "reextract": {
         const r = await reextractBatch(db, { batchSize: limit });
         return NextResponse.json({ ok: true, ...r });
+      }
+
+      // Process raw_documents that were fetched but never successfully extracted.
+      case "reprocess": {
+        const { data: unprocessed } = await db
+          .from("raw_documents")
+          .select("id,source,source_id,title,abstract,full_text,doi,source_url")
+          .is("study_id", null)
+          .not("abstract", "is", null)
+          .limit(limit);
+        const result = { processed: 0, newStudies: 0, errors: [] as string[] };
+        for (const raw of unprocessed ?? []) {
+          try {
+            const extraction = await extractStudy({
+              source: raw.source as any,
+              source_id: raw.source_id,
+              title: raw.title ?? "",
+              abstract: raw.abstract ?? null,
+              full_text: raw.full_text ?? null,
+              doi: raw.doi ?? null,
+            });
+            await persistStudy({
+              db,
+              raw_document_id: raw.id,
+              source: raw.source,
+              source_id: raw.source_id,
+              extraction,
+              source_url: raw.source_url,
+            });
+            result.newStudies++;
+          } catch (err: any) {
+            result.errors.push(`${raw.source_id}: ${err.message}`);
+          }
+          result.processed++;
+        }
+        return NextResponse.json({ ok: true, ...result });
       }
 
       case "summaries": {
