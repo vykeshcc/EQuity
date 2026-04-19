@@ -1,5 +1,5 @@
 import { NextResponse } from "next/server";
-import { getAdminDb } from "@/lib/db/client";
+import { getAdminDb, getDb } from "@/lib/db/client";
 import { ingestPubmedForPeptide } from "@/lib/ingestion/pubmed";
 import { ingestCtGovForPeptide } from "@/lib/ingestion/clinicaltrials";
 import { ingestBiorxivForPeptide } from "@/lib/ingestion/biorxiv";
@@ -39,6 +39,7 @@ async function handle(req: Request, source: string): Promise<Response> {
   }
 
   const db = getAdminDb();
+  const anonDb = getDb(); // anon key — used only for public reads (peptides list)
   const url = new URL(req.url);
   const peptideSlug = url.searchParams.get("peptide");
   const limit = Number(url.searchParams.get("limit") ?? "25");
@@ -49,7 +50,7 @@ async function handle(req: Request, source: string): Promise<Response> {
       case "pubmed":
       case "clinicaltrials":
       case "biorxiv": {
-        let query = db.from("peptides").select("id,name,aliases,slug");
+        let query = anonDb.from("peptides").select("id,name,aliases,slug");
         if (peptideSlug) query = query.eq("slug", peptideSlug).limit(1) as any;
         else query = query.limit(200) as any;
         const { data: list, error: listError } = await query;
@@ -78,7 +79,7 @@ async function handle(req: Request, source: string): Promise<Response> {
       }
 
       case "summaries": {
-        const { data: peptides } = await db.from("peptides").select("id,name").limit(50);
+        const { data: peptides } = await anonDb.from("peptides").select("id,name").limit(50);
         const out = [];
         for (const p of peptides ?? []) {
           try {
