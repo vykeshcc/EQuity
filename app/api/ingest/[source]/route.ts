@@ -83,15 +83,15 @@ async function handle(req: Request, source: string): Promise<Response> {
 
       // Process raw_documents that were fetched but never successfully extracted.
       case "reprocess": {
-        // Find raw_documents not yet referenced by any study.
-        const { data: studiedIds } = await db
+        // Find raw_documents not yet referenced by any study (use anonDb — admin client has read issues).
+        const { data: studiedIds } = await anonDb
           .from("studies")
           .select("raw_document_id")
           .not("raw_document_id", "is", null)
           .limit(10000);
         const doneSet = new Set((studiedIds ?? []).map((r: any) => r.raw_document_id));
 
-        const { data: allRaw } = await db
+        const { data: allRaw } = await anonDb
           .from("raw_documents")
           .select("id,source,source_id,title,abstract,full_text,doi,source_url")
           .not("abstract", "is", null)
