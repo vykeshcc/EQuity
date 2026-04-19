@@ -67,6 +67,11 @@ push_env "GEMINI_PRO_MODEL"            "gemini-2.5-pro"   "plain"
 # Update this after first Vercel deploy to your actual URL
 push_env "NEXT_PUBLIC_SITE_URL"        "https://equity.vercel.app" "plain"
 
+# ── Ingestion ───────────────────────────────────────────────────────────────
+push_env "PUBMED_API_KEY"              "889adb76ad93ff0e1e58eb641feb272f2d09"
+push_env "PUBMED_EMAIL"               "vykeshcc@gmail.com" "plain"
+push_env "CRON_SECRET"                "$(openssl rand -hex 20)" "plain"
+
 # ── Feature flags ───────────────────────────────────────────────────────────
 push_env "ENABLE_AUTO_INGEST"          "true" "plain"
 
