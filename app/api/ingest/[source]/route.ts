@@ -83,18 +83,20 @@ async function handle(req: Request, source: string): Promise<Response> {
 
       // Process raw_documents that were fetched but never successfully extracted.
       case "reprocess": {
-        // Find raw_documents not yet referenced by any study (use anonDb — admin client has read issues).
-        const { data: studiedIds, error: studiedErr } = await anonDb
+        // Use the admin (service-role) client — it bypasses RLS, so this works
+        // regardless of whether the public-read policy is applied on raw_documents.
+        const { data: studiedIds, error: studiedErr } = await db
           .from("studies")
           .select("raw_document_id")
           .not("raw_document_id", "is", null)
           .limit(10000);
         const doneSet = new Set((studiedIds ?? []).map((r: any) => r.raw_document_id));
 
-        const { data: allRaw, error: rawErr } = await anonDb
+        const { data: allRaw, error: rawErr } = await db
           .from("raw_documents")
           .select("id,source,source_id,title,abstract,full_text,doi")
           .not("abstract", "is", null)
+          .order("fetched_at", { ascending: true })
           .limit(limit * 4);
         const unprocessed = (allRaw ?? []).filter((r: any) => !doneSet.has(r.id)).slice(0, limit);
 

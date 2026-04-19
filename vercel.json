@@ -1,5 +1,6 @@
 {
   "crons": [
+    { "path": "/api/ingest/reprocess?limit=50", "schedule": "0 2 * * *" },
     { "path": "/api/ingest/pubmed?sinceDays=2", "schedule": "0 3 * * *" },
     { "path": "/api/ingest/clinicaltrials", "schedule": "15 3 * * *" },
     { "path": "/api/ingest/biorxiv?sinceDays=3", "schedule": "30 3 * * *" },
