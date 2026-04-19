@@ -5,8 +5,8 @@ import {
   type GenerateContentResult,
 } from "@google/generative-ai";
 
-const DEFAULT_FLASH_MODEL = process.env.GEMINI_FLASH_MODEL ?? "gemini-2.0-flash";
-const DEFAULT_PRO_MODEL = process.env.GEMINI_PRO_MODEL ?? "gemini-2.0-flash-thinking-exp";
+const DEFAULT_FLASH_MODEL = process.env.GEMINI_FLASH_MODEL ?? "gemini-2.5-flash";
+const DEFAULT_PRO_MODEL = process.env.GEMINI_PRO_MODEL ?? "gemini-2.5-pro";
 
 let sdk: GoogleGenerativeAI | null = null;
 function getSDK(): GoogleGenerativeAI {
