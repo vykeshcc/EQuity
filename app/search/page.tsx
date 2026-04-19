@@ -1,50 +1,66 @@
 import Link from "next/link";
 import { getDb } from "@/lib/db/client";
 import { embed, toPgVector } from "@/lib/embeddings/embed";
+import { Pagination } from "@/components/Pagination";
 
 export const dynamic = "force-dynamic";
 
+const PAGE_SIZE = 25;
+
 interface PageProps {
-  searchParams: Promise<{ q?: string; mode?: "keyword" | "semantic" }>;
+  searchParams: Promise<{ q?: string; mode?: "keyword" | "semantic"; page?: string }>;
 }
 
 export default async function SearchPage({ searchParams }: PageProps) {
-  const { q = "", mode = "keyword" } = await searchParams;
+  const { q = "", mode = "keyword", page: pageParam } = await searchParams;
+  const page = Math.max(1, Number(pageParam ?? 1));
+  const from = (page - 1) * PAGE_SIZE;
   const db = getDb();
 
   let studies: any[] = [];
   let policy: any[] = [];
   let peptides: any[] = [];
 
+  let studyCount = 0;
+
   if (q.trim().length >= 2) {
     if (mode === "semantic" && (process.env.VOYAGE_API_KEY || process.env.OPENAI_API_KEY)) {
       try {
         const [v] = await embed([q]);
-        const { data } = await db.rpc("match_studies", { query_embedding: toPgVector(v), match_count: 40 });
-        studies = data ?? [];
+        const { data } = await db.rpc("match_studies", { query_embedding: toPgVector(v), match_count: PAGE_SIZE + 1 });
+        const all = data ?? [];
+        studyCount = all.length;
+        studies = all.slice(from, from + PAGE_SIZE);
       } catch {
         studies = [];
       }
     } else {
-      const [{ data: s }, { data: p }, { data: pep }] = await Promise.all([
+      const tsTerms = q
+        .replace(/[^\w\s-]/g, " ")
+        .trim()
+        .split(/\s+/)
+        .filter(Boolean)
+        .join(" | ");
+      const [{ data: s, count: sc }, { data: p }, { data: pep }] = await Promise.all([
         db
           .from("studies")
-          .select("id,title,year,journal,study_type,species,n_subjects,quality_score")
-          .or(`title.ilike.%${q}%,conclusion.ilike.%${q}%`)
+          .select("id,title,year,journal,study_type,species,n_subjects,quality_score", { count: "exact" })
+          .textSearch("full_text_tsv", tsTerms, { type: "plain" })
           .order("quality_score", { ascending: false })
-          .limit(40),
+          .range(from, from + PAGE_SIZE - 1),
         db
           .from("policy_items")
           .select("id,jurisdiction,status,summary,source_url,effective_date,peptide:peptides(slug,name)")
-          .or(`title.ilike.%${q}%,summary.ilike.%${q}%`)
+          .textSearch("search_tsv", tsTerms, { type: "plain" })
           .limit(10),
         db
           .from("peptides")
           .select("slug,name,mechanism,study_count")
-          .or(`name.ilike.%${q}%,aliases.cs.{${q}}`)
+          .textSearch("search_tsv", tsTerms, { type: "plain" })
           .limit(10),
       ]);
       studies = s ?? [];
+      studyCount = sc ?? 0;
       policy = p ?? [];
       peptides = pep ?? [];
     }
@@ -88,7 +104,7 @@ export default async function SearchPage({ searchParams }: PageProps) {
 
           <section>
             <h2 className="mb-2 text-sm font-semibold uppercase tracking-wide text-slate-500">
-              Studies ({studies.length})
+              Studies ({studyCount})
             </h2>
             <ul className="space-y-2">
               {studies.map((s: any) => (
@@ -100,6 +116,11 @@ export default async function SearchPage({ searchParams }: PageProps) {
                 </li>
               ))}
             </ul>
+            <Pagination
+              page={page}
+              hasMore={from + PAGE_SIZE < studyCount}
+              buildHref={(p) => `/search?q=${encodeURIComponent(q)}&mode=${mode}&page=${p}`}
+            />
           </section>
 
           {policy.length > 0 && (

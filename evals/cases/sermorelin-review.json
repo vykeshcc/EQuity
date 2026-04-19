@@ -1,0 +1,19 @@
+{
+  "name": "sermorelin-gh-review",
+  "input": {
+    "source": "manual",
+    "source_id": "sermorelin-review-1",
+    "title": "Sermorelin as a growth hormone secretagogue: mechanisms, clinical evidence, and safety — a narrative review",
+    "abstract": "Sermorelin (GHRH 1-29 NH₂) is a synthetic analogue of the first 29 amino acids of endogenous growth-hormone-releasing hormone. This narrative review summarizes its pharmacology, clinical evidence, and safety profile based on a PubMed search from 1980 to 2023 yielding 87 relevant publications. Sermorelin stimulates pituitary GH release via GHRH-R binding and has a shorter half-life (~10 minutes intravenous) than full-length GHRH. Clinical evidence includes use in adult GH deficiency, paediatric short stature, and anti-ageing contexts. Controlled trials demonstrate dose-dependent IGF-1 elevation; long-term safety data are limited to 12-month studies showing no pituitary adenoma risk. The review identifies key gaps: no head-to-head trials versus recombinant GH; absence of data in women >65 years; and a need for standardized dosing protocols.",
+    "journal": "Endocrine Reviews",
+    "year": 2024
+  },
+  "expected": {
+    "study_type": "review",
+    "species": "human",
+    "peptides": ["sermorelin"]
+  },
+  "rubric": {
+    "required_fields": ["study_type", "peptides"]
+  }
+}

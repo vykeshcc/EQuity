@@ -1,17 +1,43 @@
 import { notFound } from "next/navigation";
 import Link from "next/link";
+import { marked } from "marked";
 import { getDb } from "@/lib/db/client";
 import { RankedStudyList } from "@/components/RankedStudyList";
 import { FeedbackButtons } from "@/components/FeedbackButtons";
+import { Pagination } from "@/components/Pagination";
 
 export const revalidate = 300;
 
-interface PageProps {
-  params: Promise<{ slug: string }>;
+export async function generateMetadata({ params }: { params: Promise<{ slug: string }> }) {
+  const { slug } = await params;
+  const db = getDb();
+  const { data: p } = await db.from("peptides").select("name,mechanism,study_count").eq("slug", slug).maybeSingle();
+  if (!p) return {};
+  return {
+    title: `${p.name} — EQuity Peptide Research`,
+    description: p.mechanism
+      ? `${p.mechanism} · ${p.study_count ?? 0} studies ranked by evidence quality.`
+      : `${p.study_count ?? 0} studies on ${p.name} ranked by evidence quality.`,
+    openGraph: {
+      title: `${p.name} — EQuity`,
+      description: p.mechanism ?? `Research evidence on ${p.name}`,
+    },
+  };
 }
 
-export default async function PeptideDetailPage({ params }: PageProps) {
+const STUDY_PAGE_SIZE = 25;
+
+interface PageProps {
+  params: Promise<{ slug: string }>;
+  searchParams: Promise<{ studyPage?: string }>;
+}
+
+export default async function PeptideDetailPage({ params, searchParams }: PageProps) {
   const { slug } = await params;
+  const { studyPage: studyPageParam } = await searchParams;
+  const studyPage = Math.max(1, Number(studyPageParam ?? 1));
+  const studyFrom = (studyPage - 1) * STUDY_PAGE_SIZE;
+  const studyTo = studyFrom + STUDY_PAGE_SIZE - 1;
   const db = getDb();
 
   const { data: peptide } = await db
@@ -21,13 +47,13 @@ export default async function PeptideDetailPage({ params }: PageProps) {
     .maybeSingle();
   if (!peptide) notFound();
 
-  const [{ data: studies }, { data: policy }, { data: summary }] = await Promise.all([
+  const [{ data: studies, count: studyCount }, { data: policy }, { data: summary }] = await Promise.all([
     db
       .from("studies")
-      .select("id,title,year,journal,study_type,species,n_subjects,quality_score,highlights,study_peptides!inner(peptide_id)")
+      .select("id,title,year,journal,study_type,species,n_subjects,quality_score,highlights,study_peptides!inner(peptide_id)", { count: "exact" })
       .eq("study_peptides.peptide_id", peptide.id)
       .order("quality_score", { ascending: false })
-      .limit(50),
+      .range(studyFrom, studyTo),
     db
       .from("policy_items")
       .select("id,jurisdiction,status,title,summary,effective_date,source_url")
@@ -111,27 +137,26 @@ export default async function PeptideDetailPage({ params }: PageProps) {
       <section>
         <div className="mb-3 flex items-end justify-between">
           <h2 className="text-lg font-semibold">Ranked studies</h2>
-          <span className="text-xs text-slate-500">Sorted by composite quality score (0–100)</span>
+          <span className="text-xs text-slate-500">
+            {studyCount ?? 0} total · sorted by composite quality score (0–100)
+          </span>
         </div>
         <RankedStudyList studies={(studies ?? []) as any} />
+        <Pagination
+          page={studyPage}
+          hasMore={studyFrom + STUDY_PAGE_SIZE < (studyCount ?? 0)}
+          buildHref={(p) => `/peptides/${slug}?studyPage=${p}`}
+        />
       </section>
     </div>
   );
 }
 
 function markdownToHtml(md: string): string {
-  // Minimal markdown rendering — avoid a full MD library for now.
-  return md
-    .replace(/&/g, "&amp;")
-    .replace(/</g, "&lt;")
-    .replace(/>/g, "&gt;")
-    .replace(/^### (.*)$/gm, "<h3>$1</h3>")
-    .replace(/^## (.*)$/gm, "<h2>$1</h2>")
-    .replace(/^# (.*)$/gm, "<h1>$1</h1>")
-    .replace(/\*\*(.+?)\*\*/g, "<strong>$1</strong>")
-    .replace(/\*(.+?)\*/g, "<em>$1</em>")
-    .replace(/\[(s-[a-f0-9]{8})\]/g, '<span class="rounded bg-brand-50 px-1 text-xs text-brand-700">$1</span>')
-    .split(/\n{2,}/)
-    .map((p) => (p.startsWith("<h") ? p : `<p>${p.replace(/\n/g, "<br/>")}</p>`))
-    .join("\n");
+  // Highlight study citation tokens like [s-a1b2c3d4] before parsing.
+  const withCitations = md.replace(
+    /\[(s-[a-f0-9]{8})\]/g,
+    '<span class="rounded bg-brand-50 px-1 text-xs text-brand-700">$1</span>',
+  );
+  return marked.parse(withCitations) as string;
 }

@@ -1,0 +1,21 @@
+{
+  "name": "epithalon-telomere-invitro",
+  "input": {
+    "source": "manual",
+    "source_id": "epithalon-invitro-1",
+    "title": "Epithalon (Ala-Glu-Asp-Gly) increases telomerase activity and telomere length in human fetal fibroblasts in vitro",
+    "abstract": "Human fetal fibroblasts (HFF-1 cell line) were treated with epithalon (Ala-Glu-Asp-Gly tetrapeptide) at 0.01, 0.1, and 1 µg/mL for 3 passages (approximately 21 days). Telomerase activity, measured by TRAP assay, increased 1.9-fold (p=0.01) at 0.1 µg/mL relative to untreated controls. Telomere length by quantitative PCR increased by 18% at the highest dose (p=0.03). Cell viability remained >95% across all concentrations as measured by MTT assay. These data demonstrate that epithalon directly stimulates telomerase in a human cell model, consistent with reported anti-ageing properties.",
+    "journal": "Biogerontology",
+    "year": 2016
+  },
+  "expected": {
+    "study_type": "in-vitro",
+    "species": "in-vitro",
+    "n_subjects": null,
+    "peptides": ["epithalon"],
+    "duration_days": 21
+  },
+  "rubric": {
+    "required_fields": ["study_type", "species", "peptides"]
+  }
+}

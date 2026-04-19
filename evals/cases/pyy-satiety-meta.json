@@ -1,0 +1,21 @@
+{
+  "name": "pyy-satiety-meta-analysis",
+  "input": {
+    "source": "manual",
+    "source_id": "pyy-meta-1",
+    "title": "Peptide YY administration and satiety: a systematic review and meta-analysis of randomized trials",
+    "abstract": "We conducted a systematic review and meta-analysis of randomized controlled trials evaluating exogenous PYY(3-36) on energy intake and appetite ratings in healthy adults. Twelve eligible RCTs (n=287 unique participants across crossover trials; total observations=412) were identified via PubMed and EMBASE searches. Intravenous or subcutaneous PYY(3-36) reduced ad libitum energy intake by a pooled mean of −178 kcal (95% CI: −241 to −115; I²=42%) compared with saline. Appetite visual-analogue-scale scores were also significantly reduced (SMD −0.61; 95% CI: −0.88 to −0.34). Nausea was the most common adverse effect (24% vs 6% placebo). Funnel-plot asymmetry was modest. PYY(3-36) robustly suppresses appetite and energy intake in the short term.",
+    "journal": "Obesity Reviews",
+    "year": 2023
+  },
+  "expected": {
+    "study_type": "meta-analysis",
+    "species": "human",
+    "n_subjects": 287,
+    "peptides": ["PYY"],
+    "route": "intravenous"
+  },
+  "rubric": {
+    "required_fields": ["study_type", "species", "peptides"]
+  }
+}

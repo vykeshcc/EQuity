@@ -1,0 +1,21 @@
+{
+  "name": "melanotan2-priapism-case-report",
+  "input": {
+    "source": "manual",
+    "source_id": "mt2-case-1",
+    "title": "Prolonged priapism following self-administration of melanotan II: a case report",
+    "abstract": "A 34-year-old male presented to the emergency department with a painful erection lasting 7 hours following self-administration of 1 mg subcutaneous melanotan II purchased online. He had no prior history of priapism or haematological disorders. Corporal aspiration confirmed ischaemic priapism; detumescence was achieved after intracavernosal phenylephrine. Serum testosterone and prolactin were normal. The patient reported using melanotan II for tanning purposes based on online forums. This case highlights a serious adverse effect of unregulated self-administration of melanotan II and underscores the dangers of unmonitored use of this research peptide.",
+    "journal": "BMJ Case Reports",
+    "year": 2019
+  },
+  "expected": {
+    "study_type": "case-report",
+    "species": "human",
+    "n_subjects": 1,
+    "peptides": ["melanotan II"],
+    "route": "subcutaneous"
+  },
+  "rubric": {
+    "required_fields": ["study_type", "species", "n_subjects", "peptides"]
+  }
+}

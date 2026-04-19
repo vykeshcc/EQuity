@@ -8,6 +8,19 @@ import { scoreBreakdown } from "@/lib/ranking/score";
 
 export const revalidate = 300;
 
+export async function generateMetadata({ params }: { params: Promise<{ id: string }> }) {
+  const { id } = await params;
+  const db = getDb();
+  const { data: s } = await db.from("studies").select("title,journal,year,study_type,species").eq("id", id).maybeSingle();
+  if (!s) return {};
+  const desc = [s.study_type, s.species, s.journal, s.year].filter(Boolean).join(" · ");
+  return {
+    title: `${s.title} — EQuity`,
+    description: desc,
+    openGraph: { title: s.title, description: desc },
+  };
+}
+
 const CORRECTABLE_FIELDS = [
   "title",
   "year",

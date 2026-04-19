@@ -1,0 +1,21 @@
+{
+  "name": "ipamorelin-gh-pilot-human",
+  "input": {
+    "source": "manual",
+    "source_id": "ipamorelin-pilot-1",
+    "title": "Ipamorelin stimulates growth hormone release in healthy adults: a pilot dose-escalation study",
+    "abstract": "Ten healthy male volunteers (aged 22–35) received single subcutaneous injections of ipamorelin at 1, 10, 30, and 100 µg/kg in a four-period crossover design with one-week washout between periods. Peak serum GH (Cmax) increased dose-dependently: 2.1, 8.4, 18.7, and 24.3 ng/mL at the four doses respectively. IGF-1 was not significantly elevated at any single dose. No effects on cortisol, ACTH, or prolactin were observed. All doses were well tolerated; mild transient headache was reported by 3 participants at the highest dose. This pilot study supports the GH-selective profile of ipamorelin and informs dosing for future longer-duration studies.",
+    "journal": "Growth Hormone & IGF Research",
+    "year": 2017
+  },
+  "expected": {
+    "study_type": "pilot",
+    "species": "human",
+    "n_subjects": 10,
+    "peptides": ["ipamorelin"],
+    "route": "subcutaneous"
+  },
+  "rubric": {
+    "required_fields": ["study_type", "species", "n_subjects", "peptides", "route"]
+  }
+}

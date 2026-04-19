@@ -1,0 +1,22 @@
+{
+  "name": "thymosin-alpha1-covid-case-series",
+  "input": {
+    "source": "manual",
+    "source_id": "ta1-cases-1",
+    "title": "Thymosin alpha-1 as adjunctive therapy in severe COVID-19: a case series of 12 patients",
+    "abstract": "We report 12 consecutive patients with severe COVID-19 pneumonia (median age 64 years; 8 male) who received thymosin alpha-1 (1.6 mg subcutaneous, twice weekly) in addition to standard-of-care (dexamethasone + remdesivir) at a single centre between March and June 2021. Median duration of thymosin alpha-1 treatment was 14 days. Lymphocyte counts normalized within 7 days in 10 of 12 patients. Eight patients were discharged from intensive care within 21 days; 2 died of multi-organ failure (not attributed to thymosin alpha-1). No drug-related adverse events were observed. These observations suggest thymosin alpha-1 may support immune recovery in severe COVID-19, warranting controlled evaluation.",
+    "journal": "International Immunopharmacology",
+    "year": 2022
+  },
+  "expected": {
+    "study_type": "case-series",
+    "species": "human",
+    "n_subjects": 12,
+    "peptides": ["thymosin alpha-1"],
+    "duration_days": 14,
+    "route": "subcutaneous"
+  },
+  "rubric": {
+    "required_fields": ["study_type", "species", "n_subjects", "peptides"]
+  }
+}

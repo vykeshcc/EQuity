@@ -14,7 +14,7 @@ export async function getServerDb(): Promise<SupabaseClient> {
     {
       cookies: {
         getAll: () => cookieStore.getAll(),
-        setAll: (list) => {
+        setAll: (list: { name: string; value: string; options?: Record<string, unknown> }[]) => {
           try {
             for (const { name, value, options } of list) {
               cookieStore.set(name, value, options);

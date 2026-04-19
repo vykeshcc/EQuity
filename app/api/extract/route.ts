@@ -2,12 +2,26 @@ import { NextResponse } from "next/server";
 import { getAdminDb } from "@/lib/db/client";
 import { extractStudy } from "@/lib/extraction/extract";
 import { persistStudy } from "@/lib/extraction/persist";
+import { checkRateLimit, clientKey } from "@/lib/utils/rate-limit";
 
-/**
- * Manual-upload ingestion path. Anyone can hit this to extract + save a study
- * (rate-limiting/auth to be added — for now it's the "contribute" surface).
- */
+// 5 extractions per IP per hour.
+const RATE_LIMIT = { limit: 5, windowMs: 60 * 60 * 1000 };
+
 export async function POST(req: Request) {
+  const rl = checkRateLimit(clientKey(req), RATE_LIMIT);
+  if (!rl.allowed) {
+    return NextResponse.json(
+      { ok: false, error: "Rate limit exceeded. Try again later." },
+      {
+        status: 429,
+        headers: {
+          "Retry-After": String(Math.ceil((rl.resetAt - Date.now()) / 1000)),
+          "X-RateLimit-Remaining": "0",
+        },
+      },
+    );
+  }
+
   const body = await req.json().catch(() => null);
   if (!body?.abstract || !body?.title) {
     return NextResponse.json({ ok: false, error: "title and abstract required" }, { status: 400 });
