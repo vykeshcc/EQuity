@@ -16,3 +16,4 @@ package-lock.json
 yarn.lock
 supabase/.temp
 supabase/.branches
+*.tsbuildinfo
