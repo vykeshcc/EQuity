@@ -1,0 +1,29 @@
+name: evals
+
+on:
+  pull_request:
+    paths:
+      - "src/lib/prompts/**"
+      - "src/lib/extraction/**"
+      - "evals/**"
+  workflow_dispatch:
+
+jobs:
+  run-evals:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: "20"
+      - name: Install
+        run: npm install --no-audit --no-fund
+      - name: Typecheck
+        run: npm run typecheck
+      - name: Run evals
+        env:
+          ANTHROPIC_API_KEY: ${{ secrets.ANTHROPIC_API_KEY }}
+          NEXT_PUBLIC_SUPABASE_URL: ${{ secrets.NEXT_PUBLIC_SUPABASE_URL }}
+          SUPABASE_SERVICE_ROLE_KEY: ${{ secrets.SUPABASE_SERVICE_ROLE_KEY }}
+          EVAL_MIN_PASS_RATE: "0.8"
+        run: npm run eval

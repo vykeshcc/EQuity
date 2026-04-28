@@ -1,0 +1,49 @@
+{
+  "name": "equity-peptides",
+  "version": "0.1.0",
+  "private": true,
+  "description": "AI-powered peptide research assimilator — the best research companion for peptide researchers.",
+  "scripts": {
+    "dev": "next dev",
+    "build": "next build",
+    "start": "next start",
+    "lint": "next lint",
+    "typecheck": "tsc --noEmit",
+    "db:migrate": "tsx --env-file=.env.local scripts/migrate.ts",
+    "db:seed": "tsx --env-file=.env.local scripts/seed.ts",
+    "ingest:pubmed": "tsx scripts/ingest.ts pubmed",
+    "ingest:ctgov": "tsx scripts/ingest.ts clinicaltrials",
+    "ingest:biorxiv": "tsx scripts/ingest.ts biorxiv",
+    "ingest:policy": "tsx scripts/ingest.ts policy",
+    "reextract": "tsx scripts/reextract.ts",
+    "eval": "tsx evals/runner.ts"
+  },
+  "dependencies": {
+    "@google/generative-ai": "^0.21.0",
+    "@supabase/ssr": "^0.5.2",
+    "@supabase/supabase-js": "^2.45.0",
+    "clsx": "^2.1.1",
+    "next": "^15.0.3",
+    "react": "^19.0.0",
+    "react-dom": "^19.0.0",
+    "tailwind-merge": "^2.5.4",
+    "zod": "^3.23.8"
+  },
+  "devDependencies": {
+    "@types/node": "^22.9.0",
+    "@types/pg": "^8.20.0",
+    "@types/react": "^19.0.0",
+    "@types/react-dom": "^19.0.0",
+    "autoprefixer": "^10.4.20",
+    "eslint": "^9.14.0",
+    "eslint-config-next": "^15.0.3",
+    "pg": "^8.20.0",
+    "postcss": "^8.4.49",
+    "tailwindcss": "^3.4.15",
+    "tsx": "^4.19.2",
+    "typescript": "^5.6.3"
+  },
+  "engines": {
+    "node": ">=20"
+  }
+}

@@ -1,0 +1,11 @@
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+:root {
+  --radius: 0.5rem;
+}
+
+html, body { height: 100%; }
+
+.prose-study h3 { @apply text-sm font-semibold uppercase tracking-wide text-slate-500; }
