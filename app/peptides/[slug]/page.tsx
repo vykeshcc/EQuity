@@ -24,9 +24,9 @@ export default async function PeptideDetailPage({ params }: PageProps) {
   const [{ data: studies }, { data: policy }, { data: summary }] = await Promise.all([
     db
       .from("studies")
-      .select("id,title,one_liner,year,journal,study_type,species,n,quality,source,source_id,primary_outcomes,secondary_outcomes,rob")
-      .eq("peptide_id", peptide.id) // Assuming there is a direct peptide_id or study_peptides mapping
-      .order("quality", { ascending: false, nullsFirst: false })
+      .select("id,title,highlights,year,journal,study_type,species,n_subjects,quality_score,source,source_id,primary_outcomes,secondary_outcomes,risk_of_bias,study_peptides!inner(peptide_id)")
+      .eq("study_peptides.peptide_id", peptide.id)
+      .order("quality_score", { ascending: false, nullsFirst: false })
       .limit(50),
     db
       .from("policy_items")
@@ -45,9 +45,9 @@ export default async function PeptideDetailPage({ params }: PageProps) {
   // Fallback if the direct peptide_id query above fails, we might need to query via study_peptides depending on schema
   const fetchedStudies = studies && studies.length > 0 ? studies : (await db
       .from("studies")
-      .select("id,title,one_liner,year,journal,study_type,species,n,quality,source,source_id,primary_outcomes,secondary_outcomes,rob,study_peptides!inner(peptide_id)")
+      .select("id,title,highlights,year,journal,study_type,species,n_subjects,quality_score,source,source_id,primary_outcomes,secondary_outcomes,risk_of_bias,study_peptides!inner(peptide_id)")
       .eq("study_peptides.peptide_id", peptide.id)
-      .order("quality", { ascending: false, nullsFirst: false })
+      .order("quality_score", { ascending: false, nullsFirst: false })
       .limit(50)).data || [];
 
   const legal = (peptide.legal as any) || {};
@@ -161,7 +161,7 @@ export default async function PeptideDetailPage({ params }: PageProps) {
                       {study.title.split(" ").slice(0, 5).join(" ")}... ({study.year})
                       <small>{study.study_type} · {study.species}</small>
                     </div>
-                    <div className="effect">{study.n ? `n = ${study.n.toLocaleString()}` : "—"}</div>
+                    <div className="effect">{study.n_subjects ? `n = ${study.n_subjects.toLocaleString()}` : "—"}</div>
                     <div className="forest-vis">
                       <div className="axis" />
                       <div className="ci" style={{ left: `${ciL * 100}%`, width: `${(ciR - ciL) * 100}%` }} />
@@ -182,17 +182,17 @@ export default async function PeptideDetailPage({ params }: PageProps) {
           <div className="study-list">
             {fetchedStudies.map((s: any) => (
               <Link key={s.id} href={`/studies/${s.id}`} className="study-row">
-                <QChip q={s.quality || 50} />
+                <QChip q={s.quality_score || 50} />
                 <div>
                   <div className="title">{s.title}</div>
-                  <div className="one-liner">{s.one_liner || s.title}</div>
+                  <div className="one-liner">{s.highlights?.one_liner || s.title}</div>
                   <div className="meta-line">
                     <span>{s.journal || "Unknown"}</span><span className="sep">·</span>
                     <span>{s.year || "—"}</span><span className="sep">·</span>
                     <span>{s.study_type || "—"}</span><span className="sep">·</span>
                     <span>{s.species || "—"}</span>
-                    {s.n && <><span className="sep">·</span><span>n = {s.n.toLocaleString()}</span></>}
-                    {s.rob && <><span className="sep">·</span><span>RoB {s.rob}</span></>}
+                    {s.n_subjects && <><span className="sep">·</span><span>n = {s.n_subjects.toLocaleString()}</span></>}
+                    {s.risk_of_bias && <><span className="sep">·</span><span>RoB {s.risk_of_bias.overall || s.risk_of_bias}</span></>}
                   </div>
                 </div>
                 <div className="right">{s.source}<br/>{s.source_id}</div>

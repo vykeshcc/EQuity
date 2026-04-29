@@ -79,10 +79,10 @@ export function SearchClient({ initialQ, initialMode, peptides, studies }: { ini
           <div className="study-list">
             {studies.map((s: any) => (
               <Link key={s.id} href={`/studies/${s.id}`} className="study-row">
-                <QChip q={s.quality ?? s.quality_score ?? 50} />
+                <QChip q={s.quality_score ?? 50} />
                 <div>
                   <div className="title"><Highlight text={s.title} q={initialQ} /></div>
-                  <div className="one-liner">{s.one_liner || s.title}</div>
+                  <div className="one-liner">{s.highlights?.one_liner || s.title}</div>
                   <div className="meta-line">
                     {s.peptides?.[0]?.peptide?.name && <span>{s.peptides[0].peptide.name}</span>}
                     {s.peptide?.name && <span>{s.peptide.name}</span>}

@@ -29,7 +29,7 @@ export default async function SearchPage({ searchParams }: PageProps) {
       const [{ data: s }, { data: p }, { data: pep }] = await Promise.all([
         db
           .from("studies")
-          .select("id,title,one_liner,year,journal,study_type,species,n_subjects,quality_score,source,source_id,study_peptides!inner(peptide:peptides(slug,name))")
+          .select("id,title,highlights,year,journal,study_type,species,n_subjects,quality_score,source,source_id,study_peptides!inner(peptide:peptides(slug,name))")
           .or(`title.ilike.%${q}%,conclusion.ilike.%${q}%`)
           .order("quality_score", { ascending: false })
           .limit(40),

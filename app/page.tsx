@@ -14,7 +14,7 @@ export default async function HomePage() {
 
   const [{ data: peptides }, { data: recent }, { data: policy }] = await Promise.all([
     db.from("peptides").select("*").order("study_count", { ascending: false }).limit(8),
-    db.from("studies").select("id,title,one_liner,year,journal,study_type,species,n,quality,source,source_id,peptides:study_peptides(peptide:peptides(slug,name))").order("extracted_at", { ascending: false }).limit(5),
+    db.from("studies").select("id,title,highlights,year,journal,study_type,species,n_subjects,quality_score,source,source_id,peptides:study_peptides(peptide:peptides(slug,name))").order("extracted_at", { ascending: false }).limit(5),
     db.from("policy_items").select("id,jurisdiction,status,title,summary,effective_date,source_url,peptide:peptides(slug,name)").order("effective_date", { ascending: false }).limit(4),
   ]);
 
@@ -149,17 +149,17 @@ export default async function HomePage() {
               const pepName = s.peptides?.[0]?.peptide?.name;
               return (
                 <Link key={s.id} href={`/studies/${s.id}`} className="study-row">
-                  <QChip q={s.quality ?? 50} />
+                  <QChip q={s.quality_score ?? 50} />
                   <div>
                     <div className="title">{s.title}</div>
-                    <div className="one-liner">{s.one_liner || s.title}</div>
+                    <div className="one-liner">{s.highlights?.one_liner || s.title}</div>
                     <div className="meta-line">
                       {pepName && <><span>{pepName}</span><span className="sep">·</span></>}
                       <span>{s.journal ?? "Unknown"}</span><span className="sep">·</span>
                       <span>{s.year ?? "—"}</span><span className="sep">·</span>
                       <span>{s.study_type ?? "—"}</span><span className="sep">·</span>
                       <span>{s.species ?? "—"}</span>
-                      {s.n && <><span className="sep">·</span><span>n = {s.n.toLocaleString()}</span></>}
+                      {s.n_subjects && <><span className="sep">·</span><span>n = {s.n_subjects.toLocaleString()}</span></>}
                     </div>
                   </div>
                   <div className="right">{s.source}<br/>{s.source_id}</div>
