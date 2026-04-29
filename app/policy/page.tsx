@@ -36,7 +36,11 @@ export default async function PolicyPage() {
       </div>
 
       <div className="card">
-        {(data ?? []).map((p: any) => {
+        {(!data || data.length === 0) ? (
+          <div style={{ padding: 32, textAlign: "center", color: "var(--ink-2)", fontSize: 14 }}>
+            No policy items yet — first ingestion will populate this page.
+          </div>
+        ) : data.map((p: any) => {
           const pep = Array.isArray(p.peptide) ? p.peptide[0] : p.peptide;
           const dateParts = p.effective_date ? p.effective_date.split("-") : ["2026", "01", "01"];
           return (

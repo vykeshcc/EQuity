@@ -123,7 +123,15 @@ export default async function StudyDetailPage({ params }: PageProps) {
             } />
             <FactRow label="Duration" value={study.duration_days ? `${study.duration_days} days` : "—"} />
             <FactRow label="Route" value={study.route || "—"} />
-            {study.dose && <FactRow label="Dose" value={<span className="mono" style={{ fontSize: 13 }}>{study.dose}</span>} />}
+            {study.dose && study.dose.length > 0 && <FactRow label="Dose" value={
+              <div style={{ display: "flex", flexDirection: "column", gap: 4 }}>
+                {study.dose.map((d: any, i: number) => (
+                  <span key={i} className="mono" style={{ fontSize: 13 }}>
+                    {d.amount_raw || (d.amount_mg ? `${d.amount_mg}mg` : "")} {d.route} {d.frequency}
+                  </span>
+                ))}
+              </div>
+            } />}
             {primaryOutcomes.length > 0 && (
               <FactRow label="Primary outcomes" value={
                 <div>{primaryOutcomes.map((o: any, i: number) => <OutcomeLine key={i} o={o} />)}</div>
