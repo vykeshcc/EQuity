@@ -54,7 +54,7 @@ const DoseSchema = z
 const OutcomeSchema = z
   .object({
     name: z.string(),
-    direction: z.enum(["improved", "worsened", "no-change", "mixed", "unclear"]).optional(),
+    direction: z.enum(["improved", "worsened", "no-change", "mixed", "unclear"]).catch("unclear").optional(),
     effect_size: z.string().nullable().optional(),
     p_value: z.string().nullable().optional(),
     ci: z.string().nullable().optional(),
@@ -66,19 +66,19 @@ const AdverseEventSchema = z
   .object({
     event: z.string(),
     count: z.number().nullable().optional(),
-    severity: z.enum(["mild", "moderate", "severe", "life-threatening", "unknown"]).optional(),
+    severity: z.enum(["mild", "moderate", "severe", "life-threatening", "unknown"]).catch("unknown").optional(),
     attributed_to_peptide: z.boolean().optional(),
   })
   .strict();
 
 const RiskOfBiasSchema = z
   .object({
-    selection: z.enum(["low", "some-concerns", "high", "unclear"]).optional(),
-    performance: z.enum(["low", "some-concerns", "high", "unclear"]).optional(),
-    detection: z.enum(["low", "some-concerns", "high", "unclear"]).optional(),
-    attrition: z.enum(["low", "some-concerns", "high", "unclear"]).optional(),
-    reporting: z.enum(["low", "some-concerns", "high", "unclear"]).optional(),
-    overall: z.enum(["low", "some-concerns", "high", "unclear"]).optional(),
+    selection: z.enum(["low", "some-concerns", "high", "unclear"]).catch("unknown" as any).optional(),
+    performance: z.enum(["low", "some-concerns", "high", "unclear"]).catch("unknown" as any).optional(),
+    detection: z.enum(["low", "some-concerns", "high", "unclear"]).catch("unknown" as any).optional(),
+    attrition: z.enum(["low", "some-concerns", "high", "unclear"]).catch("unknown" as any).optional(),
+    reporting: z.enum(["low", "some-concerns", "high", "unclear"]).catch("unknown" as any).optional(),
+    overall: z.enum(["low", "some-concerns", "high", "unclear"]).catch("unknown" as any).optional(),
     rationale: z.string().nullable().optional(),
   })
   .strict();
@@ -99,19 +99,19 @@ export const ExtractedStudy = z
     doi: z.string().nullable().optional(),
     peptides: z.array(z.string()).describe("Peptide names/aliases as mentioned."),
     indications: z.array(z.string()).describe("Conditions/outcomes studied."),
-    study_type: StudyType,
-    species: Species,
+    study_type: StudyType.catch("other"),
+    species: Species.catch("other"),
     n_subjects: z.number().int().nullable().optional(),
     design: z
       .object({
-        randomized: z.boolean().optional(),
-        blinded: z.enum(["none", "single", "double", "triple", "open-label"]).optional(),
-        controlled: z.boolean().optional(),
-        placebo_controlled: z.boolean().optional(),
+        randomized: z.boolean().nullable().optional(),
+        blinded: z.enum(["none", "single", "double", "triple", "open-label"]).catch("none").optional(),
+        controlled: z.boolean().nullable().optional(),
+        placebo_controlled: z.boolean().nullable().optional(),
         arms: z.number().int().nullable().optional(),
-        crossover: z.boolean().optional(),
+        crossover: z.boolean().nullable().optional(),
       })
-      .strict()
+      .passthrough()
       .optional(),
     dose: z.array(DoseSchema).default([]),
     duration_days: z.number().int().nullable().optional(),

@@ -7,9 +7,9 @@ import { GoogleGenerativeAI, GenerativeModel } from "@google/generative-ai";
  */
 
 const DEFAULT_EXTRACTION_MODEL =
-  process.env.GOOGLE_EXTRACTION_MODEL || "gemini-2.0-flash";
+  process.env.GOOGLE_EXTRACTION_MODEL || "gemini-2.5-flash";
 const DEFAULT_HARD_MODEL =
-  process.env.GOOGLE_HARD_MODEL || "gemini-1.5-pro";
+  process.env.GOOGLE_HARD_MODEL || "gemini-2.5-pro";
 
 let genAI: GoogleGenerativeAI | null = null;
 function getGenAI(): GoogleGenerativeAI {
@@ -125,15 +125,23 @@ export async function callClaude(opts: ClaudeCallOptions): Promise<ClaudeCallRes
   throw lastErr;
 }
 
-/** Parse a model response that was asked to return JSON, tolerating code-fenced output. */
 export function parseJsonResponse<T = unknown>(text: string): T {
   const fenced = text.match(/```(?:json)?\s*([\s\S]*?)```/);
   const body = (fenced ? fenced[1] : text).trim();
   const startObj = body.indexOf("{");
   const startArr = body.indexOf("[");
-  const start =
-    [startObj, startArr].filter((i) => i >= 0).sort((a, b) => a - b)[0] ?? 0;
-  return JSON.parse(body.slice(start)) as T;
+  const start = [startObj, startArr].filter((i) => i >= 0).sort((a, b) => a - b)[0] ?? 0;
+  const slice = body.slice(start);
+  try {
+    return JSON.parse(slice) as T;
+  } catch {
+    // Attempt repair: truncate at last complete key-value pair
+    const lastComma = slice.lastIndexOf(",");
+    if (lastComma > 0) {
+      try { return JSON.parse(slice.slice(0, lastComma) + "}") as T; } catch {}
+    }
+    throw new SyntaxError(`JSON parse failed. Raw (first 200): ${slice.slice(0, 200)}`);
+  }
 }
 
 /** @deprecated Use resolveSystem internally. Kept for any external callers. */

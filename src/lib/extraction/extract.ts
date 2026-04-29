@@ -41,7 +41,7 @@ export async function extractStudy(input: ExtractInput): Promise<ExtractOutput> 
         { text: EXTRACT_SYSTEM_STATIC, cache: true }, // cached: static schema + rules
       ],
       messages: [{ role: "user", content: userMsg }],
-      maxTokens: 4096,
+      maxTokens: 8192,
       temperature: 0,
     });
     const json = parseJsonResponse(res.text);

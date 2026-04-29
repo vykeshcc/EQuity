@@ -1,11 +1,11 @@
 /**
- * Embedding utility using Google text-embedding-004 (768-d).
- * Must match `studies.embedding vector(768)` in the schema.
+ * Embedding utility using Google gemini-embedding-001 (3072-d with MRL).
+ * We request 768-d via outputDimensionality to match `vector(768)` in the schema.
  */
 
 import { GoogleGenerativeAI } from "@google/generative-ai";
 
-const EMBED_MODEL = "text-embedding-004";
+const EMBED_MODEL = "gemini-embedding-001";
 export const DIM = 768;
 
 let genAI: GoogleGenerativeAI | null = null;
@@ -20,7 +20,14 @@ function getGenAI(): GoogleGenerativeAI {
 export async function embed(texts: string[]): Promise<number[][]> {
   if (!texts.length) return [];
   const model = getGenAI().getGenerativeModel({ model: EMBED_MODEL });
-  const results = await Promise.all(texts.map((t) => model.embedContent(t)));
+  const results = await Promise.all(
+    texts.map((t) =>
+      model.embedContent({
+        content: { role: "user", parts: [{ text: t }] },
+        outputDimensionality: DIM,
+      } as any)
+    )
+  );
   return results.map((r) => r.embedding.values);
 }
 
