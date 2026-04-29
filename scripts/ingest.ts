@@ -10,6 +10,7 @@ import { getAdminDb } from "../src/lib/db/client";
 import { ingestPubmedForPeptide } from "../src/lib/ingestion/pubmed";
 import { ingestCtGovForPeptide } from "../src/lib/ingestion/clinicaltrials";
 import { ingestBiorxivForPeptide } from "../src/lib/ingestion/biorxiv";
+import { ingestOpenAlexForPeptide } from "../src/lib/ingestion/openalex";
 import { ingestFdaPolicy } from "../src/lib/policy/fda";
 import { ingestWadaPolicy } from "../src/lib/policy/wada";
 
@@ -38,6 +39,9 @@ async function main() {
       break;
     case "biorxiv":
       for (const p of peptides) console.log(await ingestBiorxivForPeptide(db, p as any, { daysBack: days }));
+      break;
+    case "openalex":
+      for (const p of peptides) console.log(await ingestOpenAlexForPeptide(db, p as any, { limit, sinceDays: days }));
       break;
     case "policy":
       console.log(await ingestFdaPolicy(db));

@@ -14,6 +14,7 @@
     "ingest:pubmed": "tsx --env-file=.env.local scripts/ingest.ts pubmed",
     "ingest:ctgov": "tsx --env-file=.env.local scripts/ingest.ts clinicaltrials",
     "ingest:biorxiv": "tsx --env-file=.env.local scripts/ingest.ts biorxiv",
+    "ingest:openalex": "tsx --env-file=.env.local scripts/ingest.ts openalex",
     "ingest:policy": "tsx --env-file=.env.local scripts/ingest.ts policy",
     "extract:pending": "tsx --env-file=.env.local scripts/extract-pending.ts",
     "reextract": "tsx --env-file=.env.local scripts/reextract.ts",

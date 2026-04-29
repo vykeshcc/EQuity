@@ -4,7 +4,7 @@ import { EXTRACT_PROMPT_VERSION, EXTRACT_SYSTEM_STATIC, buildExtractUserMessage 
 import { hashString } from "@/lib/utils/cn";
 
 export interface ExtractInput {
-  source: "pubmed" | "clinicaltrials" | "biorxiv" | "medrxiv" | "manual";
+  source: "pubmed" | "clinicaltrials" | "biorxiv" | "medrxiv" | "manual" | "openalex";
   source_id: string;
   title?: string | null;
   abstract?: string | null;
