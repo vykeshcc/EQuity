@@ -3,6 +3,7 @@
     { "path": "/api/ingest/pubmed?sinceDays=2", "schedule": "0 3 * * *" },
     { "path": "/api/ingest/clinicaltrials", "schedule": "15 3 * * *" },
     { "path": "/api/ingest/biorxiv?sinceDays=3", "schedule": "30 3 * * *" },
+    { "path": "/api/ingest/openalex?sinceDays=3", "schedule": "45 3 * * *" },
     { "path": "/api/ingest/policy", "schedule": "0 6 * * *" },
     { "path": "/api/ingest/reextract?limit=25", "schedule": "0 4 * * *" },
     { "path": "/api/ingest/summaries", "schedule": "0 5 * * 0" }

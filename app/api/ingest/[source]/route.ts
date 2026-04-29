@@ -3,6 +3,7 @@ import { getAdminDb } from "@/lib/db/client";
 import { ingestPubmedForPeptide } from "@/lib/ingestion/pubmed";
 import { ingestCtGovForPeptide } from "@/lib/ingestion/clinicaltrials";
 import { ingestBiorxivForPeptide } from "@/lib/ingestion/biorxiv";
+import { ingestOpenAlexForPeptide } from "@/lib/ingestion/openalex";
 import { ingestFdaPolicy } from "@/lib/policy/fda";
 import { ingestWadaPolicy } from "@/lib/policy/wada";
 import { reextractBatch } from "@/lib/extraction/reextract-job";
@@ -44,7 +45,8 @@ export async function POST(req: Request, { params }: RouteProps) {
     switch (source) {
       case "pubmed":
       case "clinicaltrials":
-      case "biorxiv": {
+      case "biorxiv":
+      case "openalex": {
         const { data: peptides } = await db
           .from("peptides")
           .select("id,name,aliases,slug")
@@ -60,6 +62,8 @@ export async function POST(req: Request, { params }: RouteProps) {
             results.push(await ingestPubmedForPeptide(db, p as any, { limit, sinceDays }));
           } else if (source === "clinicaltrials") {
             results.push(await ingestCtGovForPeptide(db, p as any, { limit }));
+          } else if (source === "openalex") {
+            results.push(await ingestOpenAlexForPeptide(db, p as any, { limit, sinceDays }));
           } else {
             results.push(await ingestBiorxivForPeptide(db, p as any, { daysBack: sinceDays }));
           }
