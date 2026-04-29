@@ -1,6 +1,7 @@
 "use client";
 
-import { useState } from "react";
+import React, { useState } from "react";
+import { Crumb } from "@/components/shared";
 
 type ExtractResult =
   | { ok: true; study_id: string; data: any }
@@ -9,14 +10,12 @@ type ExtractResult =
 export default function ContributePage() {
   const [title, setTitle] = useState("");
   const [abstract, setAbstract] = useState("");
-  const [doi, setDoi] = useState("");
-  const [journal, setJournal] = useState("");
-  const [year, setYear] = useState("");
   const [status, setStatus] = useState<"idle" | "extracting" | "done" | "error">("idle");
   const [result, setResult] = useState<ExtractResult | null>(null);
 
-  async function submit(e: React.FormEvent) {
-    e.preventDefault();
+  async function submit(e?: React.FormEvent) {
+    if (e) e.preventDefault();
+    if (title.trim().length < 5 || abstract.trim().length < 10) return;
     setStatus("extracting");
     setResult(null);
     try {
@@ -26,9 +25,6 @@ export default function ContributePage() {
         body: JSON.stringify({
           title,
           abstract,
-          doi: doi || null,
-          journal: journal || null,
-          year: year ? Number(year) : null,
         }),
       });
       const j = (await r.json()) as ExtractResult;
@@ -40,75 +36,84 @@ export default function ContributePage() {
     }
   }
 
+  const tokenEstimate = Math.ceil((title.length + abstract.length) / 4);
+  const costEstimate = ((title.length + abstract.length) * 0.000004).toFixed(4);
+
   return (
-    <div className="space-y-6">
-      <header>
-        <h1 className="text-2xl font-semibold">Contribute a study</h1>
-        <p className="text-sm text-slate-600">
-          Paste a title + abstract (or DOI). Claude extracts the standardized fact sheet;
-          you review and publish.
-        </p>
-      </header>
+    <>
+      <Crumb items={[{ label: "Sequence", href: "/" }, { label: "Contribute" }]} />
+      <h1 style={{ fontFamily: "var(--serif)", fontSize: 48, fontWeight: 400, letterSpacing: "-0.025em", margin: "4px 0 8px", lineHeight: 1 }}>
+        Add to the corpus
+      </h1>
+      <p style={{ color: "var(--ink-2)", margin: "0 0 24px", maxWidth: 640 }}>
+        Paste a title + abstract (or a DOI), and Claude will extract a standardized fact sheet for review before it lands in the corpus.
+        Your contribution is logged and feeds the eval golden set.
+      </p>
 
-      <form onSubmit={submit} className="space-y-3">
-        <input
-          value={title}
-          onChange={(e) => setTitle(e.target.value)}
-          placeholder="Study title"
-          required
-          className="w-full rounded-md border border-slate-300 px-3 py-2 text-sm"
-        />
-        <div className="grid gap-3 sm:grid-cols-3">
+      <div className="contrib-form">
+        <form onSubmit={submit}>
+          <div className="row-flex" style={{ marginBottom: 10 }}>
+            <span className="facet active"><span className="k">Paste abstract</span></span>
+            <span className="facet"><span className="k">DOI / PubMed ID</span></span>
+            <span className="facet"><span className="k">Upload PDF</span></span>
+          </div>
+          
           <input
-            value={doi}
-            onChange={(e) => setDoi(e.target.value)}
-            placeholder="DOI (optional)"
-            className="rounded-md border border-slate-300 px-3 py-2 text-sm"
+            placeholder="Title of the study"
+            value={title}
+            onChange={(e) => setTitle(e.target.value)}
+            style={{ width: "100%", marginBottom: 8, padding: 12, border: "1px solid var(--line)", borderRadius: 6, fontFamily: "var(--sans)" }}
+            required
           />
-          <input
-            value={journal}
-            onChange={(e) => setJournal(e.target.value)}
-            placeholder="Journal (optional)"
-            className="rounded-md border border-slate-300 px-3 py-2 text-sm"
+
+          <textarea
+            placeholder={"Paste the full abstract text here..."}
+            value={abstract}
+            onChange={(e) => setAbstract(e.target.value)}
+            required
+            rows={10}
+            style={{ width: "100%", padding: 12, border: "1px solid var(--line)", borderRadius: 6, fontFamily: "var(--sans)", resize: "vertical" }}
           />
-          <input
-            value={year}
-            onChange={(e) => setYear(e.target.value)}
-            placeholder="Year"
-            type="number"
-            className="rounded-md border border-slate-300 px-3 py-2 text-sm"
-          />
+
+          <div className="row-flex" style={{ justifyContent: "space-between", marginTop: 12 }}>
+            <span className="mono" style={{ fontSize: 11, color: "var(--ink-3)" }}>
+              {title.length + abstract.length} chars · est. {tokenEstimate} tokens · ~{costEstimate} USD
+            </span>
+            <button type="submit" className="btn primary" disabled={status === "extracting"}>
+              {status === "extracting" ? "Extracting via Claude…" : "Extract →"}
+            </button>
+          </div>
+        </form>
+
+        <div className="contrib-preview">
+          <div className="mono" style={{ fontSize: 10, color: "var(--ink-3)", textTransform: "uppercase", letterSpacing: "0.1em", marginBottom: 12 }}>
+            Live preview
+          </div>
+          {status !== "done" ? (
+            <div className="placeholder" style={{ fontSize: 14, lineHeight: 1.55 }}>
+              {status === "error" ? (
+                <span style={{ color: "var(--danger-deep)" }}>Error: {result && !result.ok ? result.error : "Unknown"}</span>
+              ) : status === "extracting" ? (
+                "Streaming structured fields from Claude Sonnet 4.6 against extract.v1.4…"
+              ) : (
+                "Your standardized fact sheet will appear here. Every field is editable before save — corrections feed the eval golden set."
+              )}
+            </div>
+          ) : (
+            <div className="stack" style={{ "--gap": "10px" } as React.CSSProperties}>
+              <div><span className="mono" style={{ color: "var(--ink-3)", fontSize: 10, textTransform: "uppercase", letterSpacing: "0.08em" }}>Status</span><br/>Successfully ingested as {result?.ok && result.study_id.slice(0, 8)}</div>
+              <div><span className="mono" style={{ color: "var(--ink-3)", fontSize: 10, textTransform: "uppercase", letterSpacing: "0.08em" }}>Link</span><br/><a href={`/studies/${result?.ok && result.study_id}`}>View full study page →</a></div>
+              
+              <div style={{ marginTop: 16 }}>
+                <span className="mono" style={{ color: "var(--ink-3)", fontSize: 10, textTransform: "uppercase", letterSpacing: "0.08em" }}>Raw Data</span>
+                <pre style={{ fontSize: 10, background: "var(--paper-2)", padding: 8, borderRadius: 4, overflow: "auto", maxHeight: 300 }}>
+                  {JSON.stringify(result?.ok && result.data, null, 2)}
+                </pre>
+              </div>
+            </div>
+          )}
         </div>
-        <textarea
-          value={abstract}
-          onChange={(e) => setAbstract(e.target.value)}
-          placeholder="Paste the abstract (or full text) here…"
-          required
-          rows={10}
-          className="w-full rounded-md border border-slate-300 px-3 py-2 text-sm"
-        />
-        <button
-          type="submit"
-          disabled={status === "extracting"}
-          className="rounded-md bg-brand-600 px-4 py-2 text-sm font-medium text-white hover:bg-brand-700 disabled:opacity-50"
-        >
-          {status === "extracting" ? "Extracting with Claude…" : "Extract & save"}
-        </button>
-      </form>
-
-      {result && !result.ok ? (
-        <div className="rounded-md border border-red-200 bg-red-50 p-3 text-sm text-red-800">{result.error}</div>
-      ) : null}
-
-      {result && result.ok ? (
-        <div className="rounded-md border border-green-200 bg-green-50 p-3 text-sm text-green-900">
-          Saved as study <a className="font-medium underline" href={`/studies/${result.study_id}`}>{result.study_id.slice(0, 8)}</a>.
-          <details className="mt-2">
-            <summary className="cursor-pointer text-xs text-green-800">Extracted JSON</summary>
-            <pre className="mt-2 overflow-auto rounded bg-white p-2 text-xs text-slate-800">{JSON.stringify(result.data, null, 2)}</pre>
-          </details>
-        </div>
-      ) : null}
-    </div>
+      </div>
+    </>
   );
 }

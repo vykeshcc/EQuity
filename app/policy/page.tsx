@@ -1,5 +1,6 @@
 import Link from "next/link";
 import { getDb } from "@/lib/db/client";
+import { Crumb, StatusTag } from "@/components/shared";
 
 export const revalidate = 300;
 
@@ -12,35 +13,65 @@ export default async function PolicyPage() {
     .limit(100);
 
   return (
-    <div className="space-y-6">
-      <header>
-        <h1 className="text-2xl font-semibold">Policy & regulatory tracker</h1>
-        <p className="text-sm text-slate-600">
-          FDA, EMA, WADA, and DEA updates cross-referenced to peptides we track. Auto-ingested daily.
-        </p>
-      </header>
-      <ul className="space-y-3">
-        {(data ?? []).map((p: any) => (
-          <li key={p.id} className="rounded-lg border border-slate-200 bg-white p-4">
-            <div className="flex flex-wrap items-center gap-2 text-xs">
-              <span className="rounded bg-slate-100 px-2 py-0.5 font-medium">{p.jurisdiction}</span>
-              <span className="rounded bg-amber-100 px-2 py-0.5 font-medium text-amber-900">{p.status}</span>
-              {p.peptide && (
-                <Link href={`/peptides/${p.peptide.slug}`} className="rounded bg-brand-50 px-2 py-0.5 text-brand-700 hover:underline">
-                  {p.peptide.name}
-                </Link>
-              )}
-              <span className="text-slate-500">{p.effective_date ?? "—"}</span>
+    <>
+      <Crumb items={[{ label: "Sequence", href: "/" }, { label: "Policy" }]} />
+      <h1 style={{ fontFamily: "var(--serif)", fontSize: 48, fontWeight: 400, letterSpacing: "-0.025em", margin: "4px 0 8px", lineHeight: 1 }}>
+        Regulatory <em style={{ color: "var(--accent-deep)", fontStyle: "italic" }}>tracker</em>
+      </h1>
+      <p style={{ color: "var(--ink-2)", margin: "0 0 24px", maxWidth: 580 }}>
+        FDA · EMA · WADA · DEA actions, cross-linked to peptide files. Updated nightly via RSS, classified by Claude.
+      </p>
+
+      <div className="filter-bar">
+        <span className="facet active"><span className="k">All sources</span></span>
+        <span className="facet"><span className="k">FDA</span></span>
+        <span className="facet"><span className="k">EMA</span></span>
+        <span className="facet"><span className="k">WADA</span></span>
+        <span className="facet"><span className="k">DEA</span></span>
+        <span style={{ width: 12 }} />
+        <span className="facet"><span className="k">Approvals</span></span>
+        <span className="facet"><span className="k">Warnings</span></span>
+        <span className="facet"><span className="k">Bans</span></span>
+        <span className="facet"><span className="k">Monitoring</span></span>
+      </div>
+
+      <div className="card">
+        {(data ?? []).map((p: any) => {
+          const pep = Array.isArray(p.peptide) ? p.peptide[0] : p.peptide;
+          const dateParts = p.effective_date ? p.effective_date.split("-") : ["2026", "01", "01"];
+          return (
+            <div key={p.id} className="policy-row">
+              <div className="policy-date">
+                <span className="y">{dateParts[2]}</span>
+                {p.effective_date ? new Date(p.effective_date).toLocaleString("en-US", { month: "short" }) : "Jan"} '{dateParts[0].slice(2)}
+              </div>
+              <div>
+                <div className="row-flex" style={{ marginBottom: 8 }}>
+                  <span className="tag solid">{p.jurisdiction}</span>
+                  <StatusTag status={p.status} />
+                  {pep && (
+                    <Link href={`/peptides/${pep.slug}`} className="tag accent">
+                      {pep.name}
+                    </Link>
+                  )}
+                </div>
+                <div className="title">{p.title}</div>
+                <div className="summary-text">{p.summary}</div>
+                <div className="mono" style={{ fontSize: 10, color: "var(--ink-3)", textTransform: "uppercase", letterSpacing: "0.08em" }}>
+                  Source · {p.jurisdiction}
+                </div>
+              </div>
+              <div style={{ alignSelf: "center" }}>
+                {p.source_url && (
+                  <a href={p.source_url} target="_blank" rel="noreferrer" className="btn" style={{ textDecoration: "none" }}>
+                    Source ↗
+                  </a>
+                )}
+              </div>
             </div>
-            {p.title ? <h3 className="mt-2 font-medium text-slate-900">{p.title}</h3> : null}
-            <p className="mt-1 text-sm text-slate-700">{p.summary}</p>
-            <a href={p.source_url} target="_blank" rel="noreferrer" className="mt-2 inline-block text-xs text-brand-700 hover:underline">
-              Source →
-            </a>
-          </li>
-        ))}
-        {!data?.length && <p className="text-sm text-slate-500">No policy items yet — first ingestion will populate this page.</p>}
-      </ul>
-    </div>
+          );
+        })}
+      </div>
+    </>
   );
 }
