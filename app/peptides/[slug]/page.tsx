@@ -167,7 +167,7 @@ export default async function PeptideDetailPage({ params }: PageProps) {
                       <div className="ci" style={{ left: `${ciL * 100}%`, width: `${(ciR - ciL) * 100}%` }} />
                       <div className={`point ${eff?.direction === "neutral" || eff?.direction === "no-change" ? "null" : ""}`} style={{ left: `${pos * 100}%` }} />
                     </div>
-                    <div className="effect">{eff?.effect ?? "—"}</div>
+                    <div className="effect">{eff?.effect_size ?? "—"}</div>
                   </div>
                 ))}
               </div>

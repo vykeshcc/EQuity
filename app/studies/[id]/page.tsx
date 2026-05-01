@@ -27,9 +27,10 @@ export default async function StudyDetailPage({ params }: PageProps) {
   let related: any[] = [];
   if (peptideSlug) {
     const { data } = await db.from("studies")
-      .select("id,title,type:study_type,year,quality")
-      .eq("peptide_id", study.peptide_id || (study.study_peptides?.[0]?.peptide as any)?.id)
+      .select("id,title,study_type,year,quality_score,study_peptides!inner(peptide_id)")
+      .eq("study_peptides.peptide_id", (study.study_peptides?.[0]?.peptide as any)?.id)
       .neq("id", id)
+      .order("quality_score", { ascending: false, nullsFirst: false })
       .limit(3);
     related = data ?? [];
   }
@@ -58,7 +59,7 @@ export default async function StudyDetailPage({ params }: PageProps) {
       <Crumb items={[
         { label: "Sequence", href: "/" },
         { label: "Studies", href: "/search" },
-        { label: study.id }
+        { label: study.title.length > 60 ? study.title.slice(0, 60) + "…" : study.title }
       ]} />
 
       <header style={{ marginBottom: 28 }}>
@@ -210,8 +211,8 @@ export default async function StudyDetailPage({ params }: PageProps) {
                 {related.map(s => (
                   <Link key={s.id} href={`/studies/${s.id}`} style={{ display: "block", padding: "12px 16px", borderTop: "1px solid var(--line)", textDecoration: "none", color: "inherit" }}>
                     <div style={{ display: "flex", alignItems: "baseline", gap: 8, marginBottom: 4 }}>
-                      <span className="mono" style={{ fontSize: 11, color: "var(--accent-deep)", fontWeight: 600 }}>{s.quality || 50}</span>
-                      <span className="mono" style={{ fontSize: 10, color: "var(--ink-3)", textTransform: "uppercase", letterSpacing: "0.08em" }}>{s.type} · {s.year}</span>
+                      <span className="mono" style={{ fontSize: 11, color: "var(--accent-deep)", fontWeight: 600 }}>{Math.round(s.quality_score ?? 50)}</span>
+                      <span className="mono" style={{ fontSize: 10, color: "var(--ink-3)", textTransform: "uppercase", letterSpacing: "0.08em" }}>{s.study_type} · {s.year}</span>
                     </div>
                     <div style={{ fontFamily: "var(--serif)", fontSize: 13, lineHeight: 1.35, textWrap: "pretty" }}>{s.title}</div>
                   </Link>
