@@ -119,7 +119,7 @@ export const ExtractedStudy = z
     primary_outcomes: z.array(OutcomeSchema).default([]),
     secondary_outcomes: z.array(OutcomeSchema).default([]),
     adverse_events: z.array(AdverseEventSchema).default([]),
-    conclusion: z.string(),
+    conclusion: z.string().nullable().catch("Not reported"),
     risk_of_bias: RiskOfBiasSchema.optional(),
     highlights: HighlightsSchema,
     confidence: z

@@ -100,16 +100,19 @@ const FIELDS: Array<{
   {
     key: "source-ref",
     label: "Source",
-    render: (s) => (
-      <a
-        href={s.source_url ?? (s.doi ? `https://doi.org/${s.doi}` : "#")}
-        target="_blank"
-        rel="noreferrer"
-        className="text-brand-700 hover:underline"
-      >
-        {s.source} / {s.source_id}
-      </a>
-    ),
+    render: (s) => {
+      const url = s.source_url || (s.doi ? `https://doi.org/${s.doi}` : s.source === "pubmed" && s.source_id ? `https://pubmed.ncbi.nlm.nih.gov/${s.source_id}/` : s.source === "clinicaltrials" && s.source_id ? `https://clinicaltrials.gov/study/${s.source_id}` : "#");
+      return (
+        <a
+          href={url}
+          target="_blank"
+          rel="noreferrer"
+          className="text-brand-700 hover:underline"
+        >
+          {s.source} / {s.source_id}
+        </a>
+      );
+    },
   },
 ];
 

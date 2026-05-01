@@ -2,6 +2,7 @@ import Link from "next/link";
 import { notFound } from "next/navigation";
 import { getDb } from "@/lib/db/client";
 import { Crumb } from "@/components/shared";
+import { scoreBreakdown } from "@/lib/ranking/score";
 
 export const revalidate = 300;
 
@@ -33,14 +34,17 @@ export default async function StudyDetailPage({ params }: PageProps) {
     related = data ?? [];
   }
 
-  // Calculate quality factors (mock logic derived from overall score)
-  const q = study.quality ?? study.quality_score ?? 50;
+  // Calculate quality factors using real breakdown
+  const q = study.quality_score ?? study.quality ?? 50;
   
-  const typeContrib = study.study_type === "RCT" ? 28 : study.study_type === "review" ? 24 : 12;
-  const specContrib = study.species === "human" ? 18 : 4;
-  const nContrib = Math.min(14, Math.log10((study.n_subjects || 1) + 1) * 4);
-  const recContrib = study.year >= 2024 ? 12 : 6;
-  const robContrib = study.rob === "low" || study.risk_of_bias === "low" ? 28 : study.rob === "some-concerns" ? 16 : 6;
+  const scoreInput = {
+    study_type: study.study_type,
+    species: study.species,
+    n_subjects: study.n_subjects,
+    year: study.year,
+    risk_of_bias: study.rob || study.risk_of_bias?.overall || study.risk_of_bias,
+  };
+  const breakdown = scoreBreakdown(scoreInput);
 
   const tldr = study.tldr || study.highlights?.tldr || [study.one_liner || study.highlights?.one_liner || "Summary unavailable"];
   
@@ -127,7 +131,7 @@ export default async function StudyDetailPage({ params }: PageProps) {
               <div style={{ display: "flex", flexDirection: "column", gap: 4 }}>
                 {study.dose.map((d: any, i: number) => (
                   <span key={i} className="mono" style={{ fontSize: 13 }}>
-                    {d.amount_raw || (d.amount_mg ? `${d.amount_mg}mg` : "")} {d.route} {d.frequency}
+                    {d.peptide ? <strong style={{ fontWeight: 600 }}>{d.peptide}</strong> : ""} {d.amount_raw || (d.amount_mg != null ? `${d.amount_mg}mg` : "")} {d.route ? `, ${d.route}` : ""} {d.frequency ? `, ${d.frequency}` : ""} {d.total_days ? `, ${d.total_days}d` : ""}
                   </span>
                 ))}
               </div>
@@ -167,7 +171,10 @@ export default async function StudyDetailPage({ params }: PageProps) {
           </dl>
 
           <div className="row-flex">
-            {study.source_url && <a href={study.source_url} target="_blank" rel="noreferrer" className="btn primary" style={{ textDecoration: "none" }}>Open original →</a>}
+            {(() => {
+              const url = study.source_url || (study.doi ? `https://doi.org/${study.doi}` : (study.source === 'pubmed' ? `https://pubmed.ncbi.nlm.nih.gov/${study.source_id}/` : (study.source === 'clinicaltrials' ? `https://clinicaltrials.gov/study/${study.source_id}` : null)));
+              return url ? <a href={url} target="_blank" rel="noreferrer" className="btn primary" style={{ textDecoration: "none" }}>Open original →</a> : null;
+            })()}
             <button className="btn">Cite (BibTeX)</button>
             <button className="btn">Suggest correction</button>
             <button className="btn">👍</button>
@@ -179,11 +186,11 @@ export default async function StudyDetailPage({ params }: PageProps) {
           <div className="card" style={{ marginBottom: 16 }}>
             <div className="card-h"><h3>Quality breakdown</h3><span className="mono" style={{ fontSize: 16, color: "var(--ink)", fontFamily: "var(--serif)" }}>{Math.round(q)}</span></div>
             <div className="card-body">
-              <QualityFactor label="Study type" weight={28} contrib={typeContrib} />
-              <QualityFactor label="Species (human)" weight={18} contrib={specContrib} />
-              <QualityFactor label="N (log)" weight={14} contrib={nContrib} />
-              <QualityFactor label="Recency" weight={12} contrib={recContrib} />
-              <QualityFactor label="Risk of bias (inv)" weight={28} contrib={robContrib} />
+              <QualityFactor label="Study type" weight={35} contrib={breakdown.components.type} />
+              <QualityFactor label="Species" weight={15} contrib={breakdown.components.species} />
+              <QualityFactor label="N (log)" weight={20} contrib={breakdown.components.n} />
+              <QualityFactor label="Recency" weight={15} contrib={breakdown.components.recency} />
+              <QualityFactor label="Risk of bias (inv)" weight={15} contrib={breakdown.components.rob} />
             </div>
           </div>
 
@@ -232,9 +239,9 @@ function OutcomeLine({ o }: { o: any }) {
   return (
     <div className="outcome">
       <span className="name">{o.name}</span>
-      {o.effect && <span className={`effect ${cls}`}>{o.effect}</span>}
+      {o.effect_size && <span className={`effect ${cls}`}>{o.effect_size}</span>}
       <span className="stat-bits">
-        {o.p && `p ${o.p}`} {o.ci && ` · 95% CI ${o.ci}`}
+        {o.p_value && `p ${o.p_value}`} {o.ci && ` · 95% CI ${o.ci}`}
       </span>
     </div>
   );

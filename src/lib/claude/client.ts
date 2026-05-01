@@ -70,7 +70,7 @@ async function sleep(ms: number) {
 export async function callClaude(opts: ClaudeCallOptions): Promise<ClaudeCallResult> {
   const modelName =
     opts.model ?? (opts.useHardModel ? DEFAULT_HARD_MODEL : DEFAULT_EXTRACTION_MODEL);
-  const maxRetries = opts.maxRetries ?? 3;
+  const maxRetries = opts.maxRetries ?? 5;
   const systemText = resolveSystem(opts.system);
 
   const model: GenerativeModel = getGenAI().getGenerativeModel({
@@ -114,11 +114,24 @@ export async function callClaude(opts: ClaudeCallOptions): Promise<ClaudeCallRes
     } catch (err: any) {
       lastErr = err;
       const status = err?.status ?? err?.response?.status;
-      const retriable =
-        status === 429 || (status >= 500 && status < 600) || err?.code === "ECONNRESET";
+      // Treat network-level fetch failures (no status code) and HTTP 429/5xx as retriable
+      const isNetworkError =
+        !status &&
+        (err?.message?.includes("fetch failed") ||
+          err?.code === "ECONNRESET" ||
+          err?.code === "ECONNREFUSED" ||
+          err?.code === "ETIMEDOUT" ||
+          err?.code === "ENOTFOUND");
+      const isRetriableStatus = status === 429 || (status >= 500 && status < 600);
+      const retriable = isNetworkError || isRetriableStatus;
+
       if (!retriable || attempt === maxRetries) break;
-      const backoff =
-        Math.min(16000, 1000 * 2 ** attempt) + Math.floor(Math.random() * 500);
+
+      // Exponential backoff: 2s, 4s, 8s, 16s, 32s — capped at 60s, with jitter
+      const base = Math.min(60_000, 2000 * 2 ** attempt);
+      const jitter = Math.floor(Math.random() * 1000);
+      const backoff = base + jitter;
+      console.warn(`[Gemini] attempt ${attempt + 1}/${maxRetries} failed (${err?.message?.slice(0, 80)}), retrying in ${Math.round(backoff / 1000)}s...`);
       await sleep(backoff);
     }
   }
