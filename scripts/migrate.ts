@@ -18,6 +18,7 @@ const migrations = [
   "supabase/migrations/0001_init.sql",
   "supabase/migrations/0002_search_rpc.sql",
   "supabase/migrations/0003_fix_vector_dim.sql",
+  "supabase/migrations/0004_articles.sql",
 ];
 
 // Errors we can safely skip on re-runs.

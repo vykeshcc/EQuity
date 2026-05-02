@@ -11,6 +11,8 @@
     "typecheck": "tsc --noEmit",
     "db:migrate": "tsx --env-file=.env.local scripts/migrate.ts",
     "db:seed": "tsx --env-file=.env.local scripts/seed.ts",
+    "db:seed-articles": "tsx --env-file=.env.local scripts/seed-articles.ts",
+    "articles:generate": "tsx --env-file=.env.local scripts/generate-articles.ts",
     "ingest:pubmed": "tsx --env-file=.env.local scripts/ingest.ts pubmed",
     "ingest:ctgov": "tsx --env-file=.env.local scripts/ingest.ts clinicaltrials",
     "ingest:biorxiv": "tsx --env-file=.env.local scripts/ingest.ts biorxiv",
