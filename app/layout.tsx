@@ -3,9 +3,14 @@ import "./globals.css";
 import { Topbar } from "@/components/shared";
 
 export const metadata: Metadata = {
-  title: "EQuity — Peptide Research Assimilator",
+  title: "Sequence — Peptide Research & Evidence",
   description:
-    "AI-powered research companion for peptide researchers. Standardized, ranked, and continuously updated evidence on research-use peptides.",
+    "In-depth articles, standardized study extractions, and evidence synthesis for research-use peptides. Covering BPC-157, semaglutide, epithalon, and 30+ peptides from PubMed, ClinicalTrials.gov, and regulators.",
+  openGraph: {
+    title: "Sequence — Peptide Research & Evidence",
+    description: "The Sequence Journal: in-depth peptide science articles, quality-scored study extractions, and continuously updated evidence summaries.",
+    type: "website",
+  },
 };
 
 export default function RootLayout({ children }: { children: React.ReactNode }) {

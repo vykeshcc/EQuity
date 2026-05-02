@@ -8,6 +8,7 @@ import { ingestFdaPolicy } from "@/lib/policy/fda";
 import { ingestWadaPolicy } from "@/lib/policy/wada";
 import { reextractBatch } from "@/lib/extraction/reextract-job";
 import { generateEvidenceSummary } from "@/lib/extraction/evidence-summary";
+import { generateAndPersistArticle } from "@/lib/extraction/generate-article";
 
 /**
  * Cron-triggered ingestion. Vercel Cron / Supabase pg_cron hits:
@@ -93,6 +94,33 @@ export async function POST(req: Request, { params }: RouteProps) {
           }
         }
         return NextResponse.json({ ok: true, summaries: out });
+      }
+
+      case "articles": {
+        const { data: peptides } = await db
+          .from("peptides")
+          .select("slug,name")
+          .order("study_count", { ascending: false })
+          .limit(peptideSlug ? 1 : limit);
+        const targets = peptideSlug
+          ? [{ slug: peptideSlug, name: "" }]
+          : peptides ?? [];
+        const out = [];
+        for (const p of targets.slice(0, 5)) {
+          try {
+            const result = await generateAndPersistArticle(p.slug, {
+              name: "Research Team",
+              title: "Research Analyst",
+              institution: "Sequence Research Team",
+              labUrl: "",
+              bio: "The Sequence Research Team synthesizes evidence from peer-reviewed literature to produce accessible, honest assessments of peptide science.",
+            });
+            out.push({ peptide: p.slug, generated: !!result, slug: result?.slug });
+          } catch (err: any) {
+            out.push({ peptide: p.slug, error: err.message });
+          }
+        }
+        return NextResponse.json({ ok: true, articles: out });
       }
 
       default:

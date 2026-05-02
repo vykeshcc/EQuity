@@ -70,11 +70,12 @@ export function StatusTag({ status }: { status?: string | null }) {
 export function Topbar() {
   const pathname = usePathname();
   const items = [
-    ["/", "Overview"],
+    ["/", "Home"],
+    ["/journal", "Journal"],
+    ["/dashboard", "Dashboard"],
     ["/peptides", "Peptides"],
     ["/search", "Search"],
     ["/policy", "Policy"],
-    ["/contribute", "Contribute"],
   ];
   
   const isActive = (path: string) => {
