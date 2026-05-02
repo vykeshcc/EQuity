@@ -35,7 +35,7 @@ interface Article {
   quality_assessment: string | null;
   research_score_rationale: string | null;
   researcher: Researcher;
-  references: Reference[];
+  article_references: Reference[];
   peptide_id: string | null;
 }
 
@@ -125,7 +125,7 @@ export default async function ArticlePage({ params }: { params: Promise<{ slug: 
 
   const { prev, next } = adjacentArticles;
   const researcher = article.researcher as Researcher;
-  const references = article.references as Reference[];
+  const references = article.article_references as Reference[];
 
   const formatDate = (d: string) =>
     new Date(d).toLocaleDateString("en-US", { year: "numeric", month: "long", day: "numeric" });

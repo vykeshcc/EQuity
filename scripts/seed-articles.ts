@@ -233,7 +233,7 @@ async function main() {
       hero_alt: rest.hero_alt,
       reading_time: rest.reading_time,
       researcher: rest.researcher,
-      references: rest.references,
+      article_references: rest.references,
       body: rest.body,
       pull_quote: rest.pull_quote,
       quality_assessment: rest.quality_assessment,

@@ -10,7 +10,7 @@ create table if not exists articles (
   hero_alt text not null,
   reading_time int not null default 8,
   researcher jsonb not null default '{}'::jsonb,
-  "references" jsonb not null default '[]'::jsonb,
+  article_references jsonb not null default '[]'::jsonb,
   body text[] not null default '{}',
   pull_quote text,
   quality_assessment text,

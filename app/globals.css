@@ -1066,7 +1066,7 @@ button { font: inherit; color: inherit; cursor: pointer; }
   text-wrap: pretty;
 }
 .article-body p { margin: 0 0 18px; }
-.article-body p:first-of-type::first-letter {
+.article-body > div:first-child > p::first-letter {
   font-family: var(--serif);
   float: left;
   font-size: 62px;
@@ -1076,7 +1076,7 @@ button { font: inherit; color: inherit; cursor: pointer; }
   color: var(--accent-deep);
   font-weight: 400;
 }
-[data-theme="dark"] .article-body p:first-of-type::first-letter {
+[data-theme="dark"] .article-body > div:first-child > p::first-letter {
   color: var(--accent);
 }
 .article-body strong { color: var(--ink); font-weight: 600; }

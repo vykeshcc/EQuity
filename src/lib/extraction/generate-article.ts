@@ -130,7 +130,7 @@ export async function generateAndPersistArticle(
     hero_alt: heroAlt,
     reading_time: Math.max(5, Math.ceil(article.body.join(" ").split(/\s+/).length / 200)),
     researcher: { ...researcher, imageUrl: researcher.bio ? "https://images.unsplash.com/photo-1559757175-5700dde675bc?w=400&h=400&fit=crop" : "" },
-    references: [] as Array<{ label: string; url: string }>,
+    article_references: [] as Array<{ label: string; url: string }>,
     body: article.body,
     pull_quote: article.pull_quote,
     quality_assessment: article.quality_assessment,
