@@ -38,12 +38,17 @@ export default async function StudyDetailPage({ params }: PageProps) {
   // Calculate quality factors using real breakdown
   const q = study.quality_score ?? study.quality ?? 50;
   
+  const robString: string | null =
+    study.rob ||
+    (typeof study.risk_of_bias === "string" ? study.risk_of_bias : study.risk_of_bias?.overall) ||
+    null;
+
   const scoreInput = {
     study_type: study.study_type,
     species: study.species,
     n_subjects: study.n_subjects,
     year: study.year,
-    risk_of_bias: study.rob || study.risk_of_bias?.overall || study.risk_of_bias,
+    risk_of_bias: robString,
   };
   const breakdown = scoreBreakdown(scoreInput);
 
@@ -68,12 +73,12 @@ export default async function StudyDetailPage({ params }: PageProps) {
           {peptideName && <span className="tag accent">{peptideName}</span>}
           {study.doi && <span className="tag mono">DOI {study.doi}</span>}
           <span className="tag mono">{study.source} {study.source_id}</span>
-          {(study.rob || study.risk_of_bias) && (
+          {robString && (
             <span className="tag" style={{
-              background: (study.rob || study.risk_of_bias) === "low" ? "var(--good-tint)" : "var(--warn-tint)",
-              color: (study.rob || study.risk_of_bias) === "low" ? "var(--accent-deep)" : "var(--warn-deep)",
+              background: robString === "low" ? "var(--good-tint)" : "var(--warn-tint)",
+              color: robString === "low" ? "var(--accent-deep)" : "var(--warn-deep)",
               borderColor: "transparent"
-            }}>RoB {study.rob || study.risk_of_bias}</span>
+            }}>RoB {robString}</span>
           )}
         </div>
         <h1 style={{ fontFamily: "var(--serif)", fontSize: 38, fontWeight: 400, letterSpacing: "-0.02em", margin: "4px 0 12px", lineHeight: 1.05, maxWidth: 920, textWrap: "balance" }}>
@@ -87,7 +92,31 @@ export default async function StudyDetailPage({ params }: PageProps) {
         <div className="mono" style={{ fontSize: 12, color: "var(--ink-3)", textTransform: "uppercase", letterSpacing: "0.08em" }}>
           {study.journal || "Unknown journal"} · {study.year || "Unknown year"}
         </div>
+        {(() => {
+          const url = study.source_url || (study.doi ? `https://doi.org/${study.doi}` : (study.source === "pubmed" ? `https://pubmed.ncbi.nlm.nih.gov/${study.source_id}/` : (study.source === "clinicaltrials" ? `https://clinicaltrials.gov/study/${study.source_id}` : null)));
+          return url ? (
+            <div style={{ marginTop: 14 }}>
+              <a href={url} target="_blank" rel="noreferrer" className="btn primary" style={{ textDecoration: "none", fontSize: 13 }}>
+                View publication →
+              </a>
+            </div>
+          ) : null;
+        })()}
       </header>
+
+      {study.abstract && (
+        <div className="card" style={{ marginBottom: 28 }}>
+          <div className="card-h">
+            <h3>Abstract</h3>
+            <span className="mono" style={{ fontSize: 10, color: "var(--ink-3)" }}>SOURCE</span>
+          </div>
+          <div className="card-body">
+            <p style={{ margin: 0, fontFamily: "var(--serif)", fontSize: 15, lineHeight: 1.7, textWrap: "pretty" }}>
+              {study.abstract}
+            </p>
+          </div>
+        </div>
+      )}
 
       <div className="two-col">
         <section>
@@ -159,10 +188,10 @@ export default async function StudyDetailPage({ params }: PageProps) {
             } />
             <FactRow label="Risk of bias" value={
               <span className="tag" style={{
-                background: (study.rob || study.risk_of_bias) === "low" ? "var(--good-tint)" : "var(--warn-tint)",
-                color: (study.rob || study.risk_of_bias) === "low" ? "var(--accent-deep)" : "var(--warn-deep)",
+                background: robString === "low" ? "var(--good-tint)" : "var(--warn-tint)",
+                color: robString === "low" ? "var(--accent-deep)" : "var(--warn-deep)",
                 borderColor: "transparent"
-              }}>{study.rob || study.risk_of_bias || "—"}</span>
+              }}>{robString || "—"}</span>
             } />
             <FactRow label="Conclusion" value={
               <p style={{ margin: 0, fontFamily: "var(--serif)", fontSize: 15, lineHeight: 1.55, textWrap: "pretty" }}>
@@ -172,14 +201,8 @@ export default async function StudyDetailPage({ params }: PageProps) {
           </dl>
 
           <div className="row-flex">
-            {(() => {
-              const url = study.source_url || (study.doi ? `https://doi.org/${study.doi}` : (study.source === 'pubmed' ? `https://pubmed.ncbi.nlm.nih.gov/${study.source_id}/` : (study.source === 'clinicaltrials' ? `https://clinicaltrials.gov/study/${study.source_id}` : null)));
-              return url ? <a href={url} target="_blank" rel="noreferrer" className="btn primary" style={{ textDecoration: "none" }}>Open original →</a> : null;
-            })()}
             <button className="btn">Cite (BibTeX)</button>
             <button className="btn">Suggest correction</button>
-            <button className="btn">👍</button>
-            <button className="btn">👎</button>
           </div>
         </section>
 
