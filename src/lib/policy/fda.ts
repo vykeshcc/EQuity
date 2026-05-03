@@ -1,122 +1,111 @@
 import type { SupabaseClient } from "@supabase/supabase-js";
-import { callClaude, parseJsonResponse } from "@/lib/claude/client";
 import { embed, toPgVector } from "@/lib/embeddings/embed";
 import { hashString } from "@/lib/utils/cn";
 
 /**
- * FDA policy ingestion: pulls the compounding + press-announcement feeds,
- * asks Claude to classify relevance + which peptide each item applies to.
- *
- * RSS feeds used:
- *   - FDA press announcements: https://www.fda.gov/about-fda/contact-fda/stay-informed/rss-feeds/press-announcements/rss.xml
- *   - Compounding drug shortages (useful for peptide compounding updates): https://www.fda.gov/drugs/drug-shortages/rss.xml
+ * FDA policy ingestion via openFDA API (no API key needed, 240 req/min).
+ * Queries drug enforcement actions for tracked peptides by name/alias.
  */
 
-const FDA_FEEDS = [
-  "https://www.fda.gov/about-fda/contact-fda/stay-informed/rss-feeds/press-announcements/rss.xml",
-  "https://www.fda.gov/drugs/news-events-human-drugs/rss.xml",
-];
+const OPENFDA_BASE = "https://api.fda.gov/drug/enforcement.json";
 
-interface FeedItem {
-  title: string;
-  link: string;
-  description: string;
-  pubDate?: string;
+interface EnforcementResult {
+  recall_number: string;
+  product_description: string;
+  reason_for_recall: string;
+  recalling_firm: string;
+  classification: string; // "Class I" | "Class II" | "Class III"
+  status: string;         // "Ongoing" | "Terminated" | "Completed"
+  report_date: string;    // "YYYYMMDD"
+  recall_initiation_date: string;
+  distribution_pattern: string;
 }
 
-async function fetchFeed(url: string): Promise<FeedItem[]> {
-  const r = await fetch(url);
-  if (!r.ok) throw new Error(`FDA feed ${r.status}`);
-  const xml = await r.text();
-  const items: FeedItem[] = [];
-  for (const block of xml.split(/<item>/).slice(1)) {
-    const title = block.match(/<title>(?:<!\[CDATA\[)?([\s\S]*?)(?:\]\]>)?<\/title>/)?.[1]?.trim() ?? "";
-    const link = block.match(/<link>([\s\S]*?)<\/link>/)?.[1]?.trim() ?? "";
-    const description = block.match(/<description>(?:<!\[CDATA\[)?([\s\S]*?)(?:\]\]>)?<\/description>/)?.[1]?.trim() ?? "";
-    const pubDate = block.match(/<pubDate>([\s\S]*?)<\/pubDate>/)?.[1]?.trim();
-    if (title && link) items.push({ title, link, description, pubDate });
-  }
-  return items;
+function classifyStatus(classification: string): string {
+  if (classification === "Class I") return "banned";
+  if (classification === "Class II") return "restricted";
+  return "under-review";
 }
 
-const CLASSIFY_SYSTEM = `You are a regulatory-analyst assistant for peptide science. Given an FDA news item + a list of peptides we track, decide if the item is relevant to any of them.
+function parseOpenFdaDate(d: string): string | null {
+  if (!d || d.length < 8) return null;
+  return `${d.slice(0, 4)}-${d.slice(4, 6)}-${d.slice(6, 8)}`;
+}
 
-Return JSON: { relevant: boolean, peptide_slug: string | null, status: "banned"|"restricted"|"approved"|"Rx"|"OTC"|"under-review"|null, effective_date: "YYYY-MM-DD" | null, summary: string }
-
-Be strict. Only mark relevant=true if a tracked peptide (by name, alias, or clear drug class) is meaningfully addressed. \`summary\` ≤ 60 words.`;
+async function queryEnforcement(searchTerm: string, limit = 10): Promise<EnforcementResult[]> {
+  const q = encodeURIComponent(`product_description:"${searchTerm}"`);
+  const url = `${OPENFDA_BASE}?search=${q}&limit=${limit}&sort=report_date:desc`;
+  const r = await fetch(url, { signal: AbortSignal.timeout(10_000) });
+  if (r.status === 404) return []; // no results
+  if (!r.ok) throw new Error(`openFDA ${r.status}`);
+  const j = await r.json();
+  return j.results ?? [];
+}
 
 export async function ingestFdaPolicy(db: SupabaseClient): Promise<{ checked: number; added: number; errors: string[] }> {
   const result = { checked: 0, added: 0, errors: [] as string[] };
 
-  const { data: peptides } = await db.from("peptides").select("slug,name,aliases");
-  const peptideList = (peptides ?? [])
-    .map((p) => `${p.slug} (${p.name}${p.aliases?.length ? "; " + p.aliases.join(", ") : ""})`)
-    .join("\n");
+  const { data: peptides } = await db.from("peptides").select("id,slug,name,aliases");
 
-  const seen = new Set<string>();
-  const items: FeedItem[] = [];
-  for (const url of FDA_FEEDS) {
+  // Build search terms: peptide names + important aliases
+  const searchTerms: Array<{ term: string; peptideId: string | null; peptideSlug: string | null }> = [];
+  for (const p of peptides ?? []) {
+    searchTerms.push({ term: p.name, peptideId: p.id, peptideSlug: p.slug });
+    for (const alias of (p.aliases ?? []).slice(0, 2)) {
+      if (alias && alias.length > 3) {
+        searchTerms.push({ term: alias, peptideId: p.id, peptideSlug: p.slug });
+      }
+    }
+  }
+  // Add general compounding/peptide terms not tied to a specific peptide
+  searchTerms.push({ term: "compounding peptide", peptideId: null, peptideSlug: null });
+
+  const seenRecallNums = new Set<string>();
+
+  for (const { term, peptideId } of searchTerms) {
     try {
-      const feed = await fetchFeed(url);
-      for (const it of feed) {
-        if (!seen.has(it.link)) {
-          seen.add(it.link);
-          items.push(it);
+      const items = await queryEnforcement(term, 10);
+      for (const item of items) {
+        result.checked++;
+        if (seenRecallNums.has(item.recall_number)) continue;
+        seenRecallNums.add(item.recall_number);
+
+        const hash = hashString(item.recall_number);
+        const { data: existing } = await db
+          .from("policy_items")
+          .select("id")
+          .eq("source_hash", hash)
+          .maybeSingle();
+        if (existing) continue;
+
+        const summary = `${item.reason_for_recall} — ${item.recalling_firm}. ${item.distribution_pattern ?? ""}`.slice(0, 400).trim();
+        const sourceUrl = `https://www.accessdata.fda.gov/scripts/ires/index.cfm?recall_number=${item.recall_number}`;
+
+        let embeddingVal: string | null = null;
+        try {
+          const [vec] = await embed([`${item.product_description}\n\n${summary}`]);
+          embeddingVal = toPgVector(vec);
+        } catch {
+          // Embedding is optional
         }
+
+        await db.from("policy_items").insert({
+          jurisdiction: "FDA",
+          status: classifyStatus(item.classification),
+          peptide_id: peptideId,
+          title: item.product_description.slice(0, 200),
+          summary,
+          effective_date: parseOpenFdaDate(item.report_date),
+          source_url: sourceUrl,
+          source_hash: hash,
+          embedding: embeddingVal,
+        });
+        result.added++;
       }
     } catch (err: any) {
-      result.errors.push(`${url}: ${err.message}`);
+      result.errors.push(`${term}: ${err.message}`);
     }
   }
 
-  for (const it of items) {
-    result.checked++;
-    const hash = hashString(it.link);
-    const { data: existing } = await db
-      .from("policy_items")
-      .select("id")
-      .eq("source_hash", hash)
-      .limit(1)
-      .maybeSingle();
-    if (existing) continue;
-
-    try {
-      const res = await callClaude({
-        system: [{ text: CLASSIFY_SYSTEM, cache: true }],
-        messages: [
-          {
-            role: "user",
-            content: `TRACKED PEPTIDES:\n${peptideList}\n\nFDA ITEM:\nTITLE: ${it.title}\nLINK: ${it.link}\nDATE: ${it.pubDate ?? "?"}\nDESC: ${it.description}\n\nClassify. Return JSON only.`,
-          },
-        ],
-        maxTokens: 512,
-        temperature: 0,
-      });
-      const j = parseJsonResponse<any>(res.text);
-      if (!j.relevant) continue;
-
-      let peptide_id: string | null = null;
-      if (j.peptide_slug) {
-        const { data: p } = await db.from("peptides").select("id").eq("slug", j.peptide_slug).maybeSingle();
-        peptide_id = p?.id ?? null;
-      }
-
-      const [vec] = await embed([`${it.title}\n\n${j.summary}`]);
-      await db.from("policy_items").insert({
-        jurisdiction: "FDA",
-        status: j.status ?? "under-review",
-        peptide_id,
-        title: it.title,
-        summary: j.summary,
-        effective_date: j.effective_date ?? null,
-        source_url: it.link,
-        source_hash: hash,
-        embedding: toPgVector(vec),
-      });
-      result.added++;
-    } catch (err: any) {
-      result.errors.push(`${it.link}: ${err.message}`);
-    }
-  }
   return result;
 }

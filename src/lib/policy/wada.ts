@@ -38,7 +38,15 @@ export async function ingestWadaPolicy(db: SupabaseClient): Promise<{ checked: n
       if (existing) continue;
 
       const summary = `${p.name} appears on the WADA ${year} Prohibited List (or its explanatory guidance).`;
-      const [vec] = await embed([summary]);
+
+      let embeddingVal: string | null = null;
+      try {
+        const [vec] = await embed([summary]);
+        embeddingVal = toPgVector(vec);
+      } catch {
+        // Embedding is optional
+      }
+
       await db.from("policy_items").insert({
         jurisdiction: "WADA",
         status: "banned",
@@ -48,7 +56,7 @@ export async function ingestWadaPolicy(db: SupabaseClient): Promise<{ checked: n
         effective_date: `${year}-01-01`,
         source_url: WADA_LIST,
         source_hash: itemHash,
-        embedding: toPgVector(vec),
+        embedding: embeddingVal,
       });
       result.added++;
     }
