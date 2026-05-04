@@ -11,7 +11,7 @@ interface Researcher {
   title: string;
   institution: string;
   labUrl: string;
-  imageUrl: string;
+  imageUrl?: string;
   bio: string;
 }
 
@@ -213,14 +213,16 @@ export default async function ArticlePage({ params }: { params: Promise<{ slug: 
           <aside className="article-sidebar">
             {researcher?.name && (
               <div className="researcher-card">
-                <div className="researcher-photo">
-                  <Image
-                    src={researcher.imageUrl}
-                    alt={researcher.name}
-                    fill
-                    sizes="300px"
-                  />
-                </div>
+                {researcher.imageUrl && (
+                  <div className="researcher-photo">
+                    <Image
+                      src={researcher.imageUrl}
+                      alt={researcher.name}
+                      fill
+                      sizes="300px"
+                    />
+                  </div>
+                )}
                 <div className="researcher-name">{researcher.name}</div>
                 <div className="researcher-title">{researcher.title}</div>
                 <div className="researcher-institution">{researcher.institution}</div>
