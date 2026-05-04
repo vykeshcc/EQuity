@@ -4,24 +4,21 @@
  * Run for one: npx tsx --env-file=.env.local scripts/generate-summaries.ts bpc-157
  */
 import { createClient } from "@supabase/supabase-js";
-import { GoogleGenerativeAI } from "@google/generative-ai";
+import { callClaude, parseJsonResponse } from "../src/lib/claude/client";
 
 const SUPABASE_URL = process.env.NEXT_PUBLIC_SUPABASE_URL!;
 const SERVICE_KEY = process.env.SUPABASE_SERVICE_ROLE_KEY!;
-const GOOGLE_API_KEY = process.env.GOOGLE_API_KEY!;
-const MODEL = process.env.GOOGLE_EXTRACTION_MODEL || "gemini-2.5-flash";
+const MODEL = process.env.OPENROUTER_EXTRACTION_MODEL || "deepseek/deepseek-chat";
 const PROMPT_VERSION = "evidence-summary-v1";
 
-if (!SUPABASE_URL || !SERVICE_KEY || !GOOGLE_API_KEY) {
-  console.error("Missing required env vars");
+if (!SUPABASE_URL || !SERVICE_KEY || !process.env.OPENROUTER_API_KEY) {
+  console.error("Missing required env vars (NEXT_PUBLIC_SUPABASE_URL, SUPABASE_SERVICE_ROLE_KEY, OPENROUTER_API_KEY)");
   process.exit(1);
 }
 
 const db = createClient(SUPABASE_URL, SERVICE_KEY, {
   auth: { persistSession: false },
 });
-
-const genAI = new GoogleGenerativeAI(GOOGLE_API_KEY);
 
 const targetSlug = process.argv[2] ?? null;
 
@@ -45,38 +42,31 @@ async function generateSummaryForPeptide(peptide: { id: string; name: string }) 
     species: s.species,
     n: s.n_subjects,
     quality: s.quality_score,
-    conclusion: s.conclusion?.slice(0, 300),
-    outcomes: s.primary_outcomes?.slice(0, 3),
+    conclusion: s.conclusion?.slice(0, 500),
+    outcomes: s.primary_outcomes?.slice(0, 5),
   }));
 
-  const system = `You are a rigorous science communicator writing for an evidence-based peptide research platform. Your role is to synthesize research honestly, noting limitations and gaps. Write clearly for an educated lay audience.`;
+  const system = `You are a rigorous science communicator writing for an evidence-based peptide research platform. Your role is to synthesize research honestly, noting limitations and gaps. Write clearly for an educated lay audience. IMPORTANT: Respond with raw JSON only. Do not use markdown fences. Do not add any text before or after the JSON object.`;
 
   const userMsg = `Synthesize the evidence for ${peptide.name} based on these ${studies.length} studies:
 
 ${JSON.stringify(studiesSummary, null, 2)}
 
-Return JSON with exactly these fields:
-{
-  "summary": "3-4 paragraph evidence summary. Open with the strongest finding. Discuss study quality, species limitations, human evidence gaps, and honest bottom line. 300-400 words.",
-  "citations": ["study_type year journal", "..."] // top 5 most important studies cited
-}`;
+Respond with a single raw JSON object — no markdown, no explanation, just the JSON:
+{"summary": "4-6 paragraph evidence summary. Open with the strongest finding. Cover: (1) best human evidence, (2) animal/in-vitro data, (3) mechanisms, (4) dosing patterns observed across studies, (5) safety and adverse events, (6) honest bottom line with knowledge gaps. 500-700 words.", "citations": ["study_type year journal"]}
 
-  const model = genAI.getGenerativeModel({
+The citations array should list the top 8 most important studies in the format shown.`;
+
+  const res = await callClaude({
     model: MODEL,
-    systemInstruction: system,
-    generationConfig: { maxOutputTokens: 1200, temperature: 0.2 },
+    system: [{ text: system }],
+    messages: [{ role: "user", content: userMsg }],
+    maxTokens: 8192,
+    temperature: 0.2,
   });
 
-  const result = await model.generateContent(userMsg);
-  const text = result.response.text();
+  const parsed = parseJsonResponse<{ summary: string; citations: string[] }>(res.text);
 
-  // Parse JSON
-  const fenced = text.match(/```(?:json)?\s*([\s\S]*?)```/);
-  const body = (fenced ? fenced[1] : text).trim();
-  const start = body.indexOf("{");
-  const parsed = JSON.parse(body.slice(start)) as { summary: string; citations: string[] };
-
-  // Check if summary already exists
   const { data: existing } = await db
     .from("peptide_evidence_summaries")
     .select("id")
@@ -87,13 +77,12 @@ Return JSON with exactly these fields:
 
   let row;
   if (existing) {
-    // Update existing
     const { data } = await db
       .from("peptide_evidence_summaries")
       .update({
         summary: parsed.summary,
         citations: parsed.citations ?? [],
-        model: MODEL,
+        model: res.model,
         prompt_version: PROMPT_VERSION,
       })
       .eq("id", existing.id)
@@ -107,7 +96,7 @@ Return JSON with exactly these fields:
         peptide_id: peptide.id,
         summary: parsed.summary,
         citations: parsed.citations ?? [],
-        model: MODEL,
+        model: res.model,
         prompt_version: PROMPT_VERSION,
       })
       .select("id")
@@ -115,7 +104,7 @@ Return JSON with exactly these fields:
     row = data;
   }
 
-  return row ? { id: row.id, summary: parsed.summary.slice(0, 80) + "…" } : null;
+  return row ? { id: row.id, summary: parsed.summary.slice(0, 120) + "…" } : null;
 }
 
 async function main() {
@@ -134,7 +123,7 @@ async function main() {
     peptides = data ?? [];
   }
 
-  console.log(`Generating evidence summaries for ${peptides.length} peptide(s) using ${MODEL}…\n`);
+  console.log(`Generating evidence summaries for ${peptides.length} peptide(s) via OpenRouter (${MODEL})…\n`);
 
   let ok = 0, skip = 0, err = 0;
   for (const p of peptides) {
@@ -142,13 +131,13 @@ async function main() {
     try {
       const result = await generateSummaryForPeptide(p);
       if (result) {
-        console.log(`✓`);
+        console.log(`✓  ${result.summary}`);
         ok++;
       } else {
         skip++;
       }
     } catch (e: any) {
-      console.log(`✗ ${e.message?.slice(0, 80)}`);
+      console.log(`✗ ${e.message?.slice(0, 100)}`);
       err++;
     }
   }

@@ -1,26 +1,20 @@
-import { GoogleGenerativeAI, GenerativeModel } from "@google/generative-ai";
-
 /**
- * AI client wrapper using Google Gemini.
- * Maintains the same exported API as the original Claude client so all
- * callers (extract.ts, evidence-summary.ts, fda.ts) work without changes.
+ * AI client — OpenRouter + DeepSeek V3.
+ * Maintains the same exported interface so all callers are unchanged.
  */
 
+const OPENROUTER_BASE = "https://openrouter.ai/api/v1";
 const DEFAULT_EXTRACTION_MODEL =
-  process.env.GOOGLE_EXTRACTION_MODEL || "gemini-2.5-flash";
+  process.env.OPENROUTER_EXTRACTION_MODEL || "deepseek/deepseek-chat";
 const DEFAULT_HARD_MODEL =
-  process.env.GOOGLE_HARD_MODEL || "gemini-2.5-pro";
+  process.env.OPENROUTER_HARD_MODEL || "deepseek/deepseek-chat";
 
-let genAI: GoogleGenerativeAI | null = null;
-function getGenAI(): GoogleGenerativeAI {
-  if (!genAI) {
-    if (!process.env.GOOGLE_API_KEY) throw new Error("GOOGLE_API_KEY not set");
-    genAI = new GoogleGenerativeAI(process.env.GOOGLE_API_KEY);
-  }
-  return genAI;
+function getApiKey(): string {
+  const key = process.env.OPENROUTER_API_KEY;
+  if (!key) throw new Error("OPENROUTER_API_KEY not set");
+  return key;
 }
 
-/** Kept for source compatibility — cache hints are ignored (Gemini handles caching differently). */
 export interface CachedBlock {
   text: string;
   cache?: boolean;
@@ -39,7 +33,6 @@ export interface ClaudeCallOptions {
   temperature?: number;
   maxRetries?: number;
   useHardModel?: boolean;
-  /** No-op — kept for source compatibility. */
   cache?: boolean;
 }
 
@@ -73,66 +66,76 @@ export async function callClaude(opts: ClaudeCallOptions): Promise<ClaudeCallRes
   const maxRetries = opts.maxRetries ?? 5;
   const systemText = resolveSystem(opts.system);
 
-  const model: GenerativeModel = getGenAI().getGenerativeModel({
-    model: modelName,
-    systemInstruction: systemText || undefined,
-    generationConfig: {
-      maxOutputTokens: opts.maxTokens ?? 4096,
-      temperature: opts.temperature ?? 0,
-    },
-  });
+  const messages: { role: string; content: string }[] = [];
+  if (systemText) messages.push({ role: "system", content: systemText });
+  for (const m of opts.messages) messages.push({ role: m.role, content: m.content });
 
-  // Convert Anthropic-style messages to Gemini content format.
-  const contents = opts.messages.map((m) => ({
-    role: m.role === "assistant" ? "model" : "user",
-    parts: [{ text: m.content }],
-  }));
+  const body = {
+    model: modelName,
+    messages,
+    max_tokens: opts.maxTokens ?? 4096,
+    temperature: opts.temperature ?? 0,
+  };
 
   const startedAt = Date.now();
   let lastErr: unknown;
 
   for (let attempt = 0; attempt <= maxRetries; attempt++) {
     try {
-      const result = await model.generateContent({ contents });
-      const response = result.response;
-      const text = response.text();
-      const meta = response.usageMetadata;
+      const res = await fetch(`${OPENROUTER_BASE}/chat/completions`, {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+          Authorization: `Bearer ${getApiKey()}`,
+          "HTTP-Referer": "https://equity-peptide.vercel.app",
+          "X-Title": "EQuity Peptide Research",
+        },
+        body: JSON.stringify(body),
+      });
+
+      if (!res.ok) {
+        const errText = await res.text().catch(() => res.statusText);
+        const err: any = new Error(`OpenRouter ${res.status}: ${errText}`);
+        err.status = res.status;
+        throw err;
+      }
+
+      const json: any = await res.json();
+      const choice = json.choices?.[0];
+      const text: string = choice?.message?.content ?? "";
+      const usage = json.usage ?? {};
 
       return {
         text,
-        model: modelName,
-        stopReason: response.candidates?.[0]?.finishReason ?? null,
+        model: json.model ?? modelName,
+        stopReason: choice?.finish_reason ?? null,
         usage: {
-          inputTokens: meta?.promptTokenCount ?? 0,
-          outputTokens: meta?.candidatesTokenCount ?? 0,
+          inputTokens: usage.prompt_tokens ?? 0,
+          outputTokens: usage.completion_tokens ?? 0,
           cacheCreationTokens: 0,
           cacheReadTokens: 0,
         },
         latencyMs: Date.now() - startedAt,
-        raw: response,
+        raw: json,
       };
     } catch (err: any) {
       lastErr = err;
-      const status = err?.status ?? err?.response?.status;
-      // Treat network-level fetch failures (no status code) and HTTP 429/5xx as retriable
-      const isNetworkError =
-        !status &&
-        (err?.message?.includes("fetch failed") ||
-          err?.code === "ECONNRESET" ||
-          err?.code === "ECONNREFUSED" ||
-          err?.code === "ETIMEDOUT" ||
-          err?.code === "ENOTFOUND");
-      const isRetriableStatus = status === 429 || (status >= 500 && status < 600);
-      const retriable = isNetworkError || isRetriableStatus;
+      const status = err?.status;
+      const isRetriable =
+        !status ||
+        status === 429 ||
+        (status >= 500 && status < 600) ||
+        err?.code === "ECONNRESET" ||
+        err?.code === "ETIMEDOUT";
 
-      if (!retriable || attempt === maxRetries) break;
+      if (!isRetriable || attempt === maxRetries) break;
 
-      // Exponential backoff: 2s, 4s, 8s, 16s, 32s — capped at 60s, with jitter
       const base = Math.min(60_000, 2000 * 2 ** attempt);
       const jitter = Math.floor(Math.random() * 1000);
-      const backoff = base + jitter;
-      console.warn(`[Gemini] attempt ${attempt + 1}/${maxRetries} failed (${err?.message?.slice(0, 80)}), retrying in ${Math.round(backoff / 1000)}s...`);
-      await sleep(backoff);
+      console.warn(
+        `[OpenRouter] attempt ${attempt + 1}/${maxRetries} failed (${err?.message?.slice(0, 80)}), retrying in ${Math.round((base + jitter) / 1000)}s...`
+      );
+      await sleep(base + jitter);
     }
   }
   throw lastErr;
@@ -148,18 +151,16 @@ export function parseJsonResponse<T = unknown>(text: string): T {
   try {
     return JSON.parse(slice) as T;
   } catch {
-    // Attempt repair: truncate at last complete key-value pair
     const lastComma = slice.lastIndexOf(",");
     if (lastComma > 0) {
-      try { return JSON.parse(slice.slice(0, lastComma) + "}") as T; } catch {}
+      try {
+        return JSON.parse(slice.slice(0, lastComma) + "}") as T;
+      } catch {}
     }
     throw new SyntaxError(`JSON parse failed. Raw (first 200): ${slice.slice(0, 200)}`);
   }
 }
 
-/** @deprecated Use resolveSystem internally. Kept for any external callers. */
-export function buildSystem(
-  system: ClaudeCallOptions["system"]
-): string | undefined {
+export function buildSystem(system: ClaudeCallOptions["system"]): string | undefined {
   return resolveSystem(system) || undefined;
 }
